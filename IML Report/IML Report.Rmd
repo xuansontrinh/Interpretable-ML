@@ -84,7 +84,7 @@ print(learner)
 ```
 
 # Interpretable Machine Learning Methods and Hypotheses
-We first give a brief description of some interpretable machine learning methods we would use to investigate our Hypotheses.
+We first give a brief description of some interpretable machine learning methods we would use to investigate our hypotheses. The methods are more thoroughly described in the Interpertable Machine Learning book^[https://christophm.github.io/interpretable-ml-book/].
 
 ## Interpretable Machine Learning Methods
 
