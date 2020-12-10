@@ -4,18 +4,17 @@ author:
   - Xuan-Son Trinh^[Ludwig Maximilian University of Munich, Son.Trinh@campus.lmu.de]
   - Victor Tuekam^[Ludwig Maximilian University of Munich, t.victor@campus.lmu.de]
 output: 
-  bookdown::pdf_document2:
+  pdf_document:
     citation_package: default
-    toc: true
-    toc_depth: 5
-    latex_engine: xelatex
+    toc: false
+    number_sections: true
 ---
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-## Data set
+# Data set
 For the Seminar we use the South German Credit dataset, available on [UCI Machine learning repository](https://archive.ics.uci.edu/ml/datasets/South+German+Credit+%28UPDATE%29).
 
 The data set consists of a 1000 observations together with 21 attributes. The data was collected between 1973 and 1975. The task associated with this data set is the classification of individuals (instances) according to their credit risk ("good", "bad").
@@ -54,7 +53,7 @@ We use the `skimr` package to explore the dataset
 library(skimr)
 skimr::skim(data)
 ```
-## Fitting a black box model (xgboost)
+# Fitting a black box model (xgboost)
 We use the `mlr3` package to do the modeling.
 
 ```{r}
@@ -69,17 +68,68 @@ fac_to_int <- po("encode", method="treatment", affect_columns = selector_type("f
 ord_to_int <- po("colapply", applicator = as.integer, affect_columns = selector_type("ordered"))
 pipe <- fac_to_int %>>% ord_to_int %>>% learner
 ```
-### Train the model
-```{r}
+## Train the model
+```{r eval=FALSE}
 glearner = GraphLearner$new(pipe)
 
 rr = resample(task, glearner, rsmp("cv", folds = 10))
 rr$aggregate()
 ```
-### Tuning
+## Tuning
 ```{r}
 #library("mlr3tuning")
 #library("paradox")
 
 print(learner)
 ```
+
+# Interpretable Machine Learning Methods and Hypotheses
+We first give a brief description of some interpretable machine learning methods we would use to investigate our hypotheses. The methods are more thoroughly described in the Interpertable Machine Learning book^[https://christophm.github.io/interpretable-ml-book/].
+
+## Interpretable Machine Learning Methods
+
+### Feature Effects
+  
+**Partial Dependence Plot:** It shows the marginal effect a feature has on the output of a model.
+  
+**SHAP Dependence Plots:** An alternative to Partial Dependence plot to visualize feature effects on the model output.
+
+**SHAP Summary Plots:** Visualizes feature importance and effects in a single plot.
+
+### Global Feature Importance
+  
+**Permutation Feature Importance:** It measures in the increase in prediction error after permuting the feature values.
+
+### Feature Interaction
+  
+**H-Statistic:** Friedman's H-Statistic can tell us two things. (1) Whether and to what extent a feature interacts with all other features in the model and (2) whether and to what extent two features interact with one-another.
+
+### Local Interpretation Methods
+  
+**Anchors:** Provides an "anchor" explanation of individual model predictions. The "anchor" explanation is a decision rule, where in unaccounted variables do not affect the prediction.
+
+### Example-Based Explanations
+
+**Counterfactual Explanations:** A counterfactual explanation of a prediction describes the smallest change to the feature values that changes the prediction to the predefined output.
+
+
+## Hypotheses and Suggested IML Methods
+|Hypothesis|IML Method|
+|----------|----------|
+|Having no `property` should imply a bad `credit_risk`|Partial Dependence Plot|
+|Is being older better for `credit_risk`|Partial Dependence Plot, SHAP Dependence Plot & SHAP Summary PLot|
+|Is the effect of `age` dependent on the effect of `property` on the `credit_risk` ? |H-Statistic|
+|The variable `telephone` should not affect the output|SHAP Summary Plot|
+|What are the most important features for the prediction of the `credit_risk`|Permutation Featurn Importance|
+|Is there an interaction between `job` and `credit_history`? People with delayed `credit_history` often have low quality `job`|H-Statistic|
+|What is the smallest change in `number_credits` that can toggle the model output from `good` to `bad`|Counterfactual Explanations|
+|People with high quality `job`s have good `credit_risk`|SHAP Feature Importance & SHAP Summary Plots|
+|How does `job` quality interact with the checking account `status` |H-Statistic|
+|High number of `people_liable` associate with bad `credit_risk`|Partial Dependence Plot|
+|Does `age` and `people_liable` interact ?|H-Statistic|
+|Does having no `property` mean bad `credit_risk` and how does this relate to age|Anchors, H-Statistic|
+|Being a foreign worker does not affect your credit risk. If this feature is important for prediction, this implies discrimination|SHAP Feature Importance & SHAP Summary Plots|
+|The better the savings, the better your credit risk|Permutation Feature Importance, SHAP Feature Importance & SHAP Summary Plots|
+|How does a change in the `savings` threshold change the `credit_risk`|Counterfactual Explanations|
+|The higher the `installment_rate` the worse the `credit_risk`|Partial Dependence Plot, SHAP Dependence Plot & SHAP Summary Plots|
+|Does owning a house (`housing`) mean good `credit_risk`|Partial Dependence Plot, SHAP Dependence Plot & SHAP Summary Plot|
