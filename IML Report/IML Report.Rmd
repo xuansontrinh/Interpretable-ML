@@ -1,5 +1,5 @@
 ---
-title: "Interpretable Machine Learning Report"
+title: "Interpretable Machine Learning Scope Definition Report"
 author:
   - Xuan-Son Trinh^[Ludwig Maximilian University of Munich, Son.Trinh@campus.lmu.de]
   - Victor Tuekam^[Ludwig Maximilian University of Munich, t.victor@campus.lmu.de]
@@ -8,28 +8,78 @@ output:
     citation_package: default
     toc: true
     toc_depth: 5
+    latex_engine: xelatex
 ---
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-## R Markdown
+## Data set
+For the Seminar we use the South German Credit dataset, available on [UCI Machine learning repository](https://archive.ics.uci.edu/ml/datasets/South+German+Credit+%28UPDATE%29).
 
-This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+The data set consists of a 1000 observations together with 21 attributes. The data was collected between 1973 and 1975. The task associated with this data set is the classification of individuals (instances) according to their credit risk ("good", "bad").
 
-When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+| Attribute        | Description           
+| ---------------- |-------------
+| status         | Status of the debtor's checking account with the bank (factor) |
+| duration         | Credit duration in months (int) |
+| credit_history    | History of the compliance with previous or concurrent credit contracts (factor) |
+| purpose| Purpose for which the credit is needed (factor) |
+| amount| Amount in DM (int) |
+| savings| Debtor's savings (factor) |
+| employment_duration| Duration of debtor's employment with current employer (oridinal, factor) |
+| installment_rate| Credit installments as a percentage of debtor's disposable income (ordinal, factor) |
+| personal_status_sex | Combined information on sex and marital status (factor) |
+| other_debtors | Is there another debtor or a guarantor for the credit ? (factor) |
+| present_residence| Length of time (in years) the debtor lives in the present residence (oridinal, factor) |
+| property | The debtor's most valuable property, (oridnal, factor) |
+| age | Age in years (int) |
+| other_installment_plans | Installment plans from providers oder than the credit-giving bank (factor) |
+| housing | Type of housing the debtor lives in  (factor) |
+| number_credits | Number of credits including the current one the debtor has (or had) at this bank (ordinal, factor) |
+| job | Quality of debtor's job (ordinal, factor) |
+| people_liable | Number of persons who financially depend on the debtor (i.e., are entitled to maintenance) (binary, factor) |
+| telephone | Is there a telephone landline registered on the debtor's name? (binary, factor) |
+| foreign_worker | Is the debtor a foreign worker ? (binary, factor) | 
+| credit_risk | Has the credit contract been complied with (good) or not (bad) ? (binary, factor) |
 
-```{r cars}
-summary(cars)
+
+
+```{r south-german-credit}
+load("../south-german-credit.Rda")
 ```
-
-## Including Plots
-
-You can also embed plots, for example:
-
-```{r pressure, echo=FALSE}
-plot(pressure)
+We use the `skimr` package to explore the dataset
+```{r eval=FALSE}
+library(skimr)
+skimr::skim(data)
 ```
+## Fitting a black box model (xgboost)
+We use the `mlr3` package to do the modeling.
 
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+```{r}
+library(mlr3)
+library(mlr3learners)
+library(mlr3pipelines)
+task <- TaskClassif$new("german_credit", data, target = "credit_risk", positive = "good")
+learner <- lrn("classif.xgboost", nrounds=1000)
+
+# convert factors into dummy ints for xgboost use mlr3pipeline
+fac_to_int <- po("encode", method="treatment", affect_columns = selector_type("factor"))
+ord_to_int <- po("colapply", applicator = as.integer, affect_columns = selector_type("ordered"))
+pipe <- fac_to_int %>>% ord_to_int %>>% learner
+```
+### Train the model
+```{r}
+glearner = GraphLearner$new(pipe)
+
+rr = resample(task, glearner, rsmp("cv", folds = 10))
+rr$aggregate()
+```
+### Tuning
+```{r}
+#library("mlr3tuning")
+#library("paradox")
+
+print(learner)
+```
