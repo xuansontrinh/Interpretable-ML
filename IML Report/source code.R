@@ -38,16 +38,18 @@ task <- TaskClassif$new("german_credit", data, target = "credit_risk", positive 
 set.seed(11302020)
 classif_err_measure = msr("classif.ce")
 classif_xgboost_learner = lrn("classif.xgboost")
-tuner = tnr("grid_search", resolution = 20)
+tuner = tnr("grid_search", resolution = 5L)
 tune_ps = ParamSet$new(list(
-  ParamDbl$new("eta", lower = 0.05, upper = 1),
-  ParamDbl$new("colsample_bylevel", lower = 0.25, upper = 1),
-  ParamDbl$new("colsample_bytree", lower = 0.25, upper = 1),
-  ParamInt$new("max_depth", lower = 2, upper = 20),
-  ParamDbl$new("subsample", lower = 0.05, upper = 1),
-  ParamInt$new("nrounds", lower = 5, upper = 100)
+  ParamDbl$new("eta", lower = 0.01, upper = 0.3), # controls the learning rate
+  ParamDbl$new("colsample_bytree", lower = 0.5, upper = 0.9), # fraction of features (variables) supplied to a tree
+  ParamInt$new("max_depth", lower = 2, upper = 20), # maximum depth of the tree
+  ParamDbl$new("subsample", lower = 0.5, upper = 0.8), # fraction of sample supplied to a tree
+  ParamInt$new("nrounds", lower = 100, upper = 140), # maximum number of iterations
+  ParamDbl$new("gamma", lower = 0, upper = 5), # regularization controller
+  ParamDbl$new("lambda", lower = 1, upper = 4.5), # L2 regularization
+  ParamDbl$new("alpha", lower = 0, upper = 1) # L1 regularization
 ))
-terminator = trm("evals", n_evals = 20)
+terminator = trm("evals", n_evals = 5L)
 at = AutoTuner$new(
   learner = classif_xgboost_learner,
   resampling = rsmp("holdout"),
@@ -66,4 +68,4 @@ design = benchmark_grid(
 )
 
 bmr = benchmark(design)
-autoplot(bmr) + theme(axis.text.x = element_text(angle = 45, hjust = 1))
+autoplot(bmr$filter(learner_ids = c("classif.log_reg", "classif.rpart", "classif.xgboost.tuned"))) + theme(axis.text.x = element_text(angle = 45, hjust = 1))
