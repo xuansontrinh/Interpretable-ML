@@ -20,30 +20,48 @@ For the Seminar we use the South German Credit dataset, available in the UCI Mac
 
 The data set consists of a 1000 observations together with 21 attributes. The data was collected between 1973 and 1975. The task associated with this data set is the classification of individuals (instances) according to their credit risk ("good", "bad").
 
-| Attribute        | Description           
-| ---------------- |-------------
-| status         | Status of the debtor's checking account with the bank (factor) |
-| duration         | Credit duration in months (int) |
-| credit_history    | History of the compliance with previous or concurrent credit contracts (factor) |
-| purpose| Purpose for which the credit is needed (factor) |
-| amount| Amount in DM (int) |
-| savings| Debtor's savings (factor) |
-| employment_duration| Duration of debtor's employment with current employer (oridinal, factor) |
-| installment_rate| Credit installments as a percentage of debtor's disposable income (ordinal, factor) |
-| personal_status_sex | Combined information on sex and marital status (factor) |
-| other_debtors | Is there another debtor or a guarantor for the credit ? (factor) |
-| present_residence| Length of time (in years) the debtor lives in the present residence (oridinal, factor) |
-| property | The debtor's most valuable property, (oridnal, factor) |
-| age | Age in years (int) |
-| other_installment_plans | Installment plans from providers oder than the credit-giving bank (factor) |
-| housing | Type of housing the debtor lives in  (factor) |
-| number_credits | Number of credits including the current one the debtor has (or had) at this bank (ordinal, factor) |
-| job | Quality of debtor's job (ordinal, factor) |
-| people_liable | Number of persons who financially depend on the debtor (i.e., are entitled to maintenance) (binary, factor) |
-| telephone | Is there a telephone landline registered on the debtor's name? (binary, factor) |
-| foreign_worker | Is the debtor a foreign worker ? (binary, factor) | 
-| credit_risk | Has the credit contract been complied with (good) or not (bad) ? (binary, factor) |
 
+| Attribute | Description                 |   
+| --------- |-----------------------------|
+| status | Status of the debtor's checking account with the bank\
+(factor with 4 levels: _"no checking account"_, _"... < 0 DM"_, _"0<= ... < 200 DM"_, _"... >= 200 DM / salary for at least 1 year"_) |
+| duration | Credit duration in months (int) |
+| credit_history | History of the compliance with previous or concurrent credit contracts\
+(factor with 5 levels: _"delay in paying off in the past"_, _"critical account/other credits elsewhere"_, _"no credits taken/all credits paid back duly"_, _"existing credits paid back duly till now"_, _"all credits at this bank paid back duly"_) |
+| purpose| Purpose for which the credit is needed\
+(factor with 11 levels: _"others"_, _"car (new)"_, _"car (used)"_, _"furniture/equipment"_, _"radio/television"_, _"domestic appliances"_, _"repairs"_, _"education"_, _"vacation"_, _"retraining"_, _"business"_) |
+| amount| Amount in DM (int) |
+| savings| Debtor's savings\
+(factor with 5 levels:  _"unknown/no savings account"_, _"... <  100 DM"_, _"100 <= ... <  500 DM"_, _"500 <= ... < 1000 DM"_, _"... >= 1000 DM"_) |
+| employment_duration| Duration of debtor's employment with current employer\
+(ordered factor with 5 levels: _"unemployed"_ < _"< 1 yr"_ < _"1 <= ... < 4 yrs"_ < _"4 <= ... < 7 yrs"_ < _">= 7 yrs"_) |
+| installment_rate| Credit installments as a percentage of debtor's disposable income\
+(ordered factor with 4 levels: _">= 35"_ < _"25 <= ... < 35"_ < _"20 <= ... < 25"_ < _"< 20"_) |
+| personal_status_sex | Combined information on sex and marital status\
+(factor with 4 levels: _"male : divorced/separated"_, _"female : non-single or male : single"_, _"male : married/widowed"_, _"female : single"_) |
+| other_debtors | Is there another debtor or a guarantor for the credit?\
+(factor with 3 levels: _"none"_, _"co-applicant"_, _"guarantor"_) |
+| present_residence| Length of time (in years) the debtor lives in the present residence\
+(ordered factor with 4 levels: _"< 1 yr"_ < _"1 <= ... < 4 yrs"_ < _"4 <= ... < 7 yrs"_ < _">= 7 yrs"_) |
+| property | The debtor's most valuable property\
+(factor with 4 levels: _"unknown / no property"_, _"car or other"_, _"building soc. savings agr./life insurance"_, _"real estate"_) |
+| age | Age in years (int) |
+| other_installment_plans | Installment plans from providers oder than the credit-giving bank\
+(factor with 3 levels: _"bank"_, _"stores"_, _"none"_) |
+| housing | Type of housing the debtor lives in\
+(factor with 3 levels: _"for free"_, _"rent"_, _"own"_) |
+| number_credits | Number of credits including the current one the debtor has (or had) at this bank\
+(ordered factor with 4 levels: _"1"_ < _"2-3"_ < _"4-5"_ < _">= 6"_) |
+| job | Quality of debtor's job\
+(factor with 4 levels: _"unemployed/unskilled - non-resident"_, _"unskilled - resident"_, _"skilled employee/official"_, _"manager/self-empl./highly qualif. employee"_) |
+| people_liable | Number of persons who financially depend on the debtor (i.e., are entitled to maintenance)\
+(factor with 2 levels: _"3 or more"_, _"0 to 2"_) |
+| telephone | Is there a telephone landline registered on the debtor's name?\
+(factor with 2 levels: _"no"_, _"yes (under customer name)"_) |
+| foreign_worker | Is the debtor a foreign worker?\
+(factor with 2 levels: _"yes"_, _"no"_) | 
+| credit_risk | Has the credit contract been complied with (good) or not (bad)?\
+(factor with 2 levels: _"bad"_, _"good"_) |
 
 
 ## Load data
