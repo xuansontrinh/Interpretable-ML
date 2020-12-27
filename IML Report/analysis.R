@@ -114,5 +114,5 @@ design <- benchmark_grid(
 
 set.seed(11302020)
 bmr <- benchmark(design, store_models = TRUE)
-
+bmr$aggregate(measure)
 autoplot(bmr, measure = measure)
