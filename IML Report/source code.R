@@ -25,7 +25,7 @@ encode_ordinal <- function(x, order = unique(x)) {
 }
 
 load("../south-german-credit.Rda")
-original_data = data
+original_data <- data
 data[which(sapply(data, is.ordered))] <- sapply(data[which(sapply(
   data,
   is.ordered
@@ -44,7 +44,7 @@ task <- TaskClassif$new("german_credit", data,
 )
 
 original_task <- TaskClassif$new("german_credit", original_data,
-                                      target = "credit_risk", positive = "good"
+  target = "credit_risk", positive = "good"
 )
 
 classif_err_measure <- msr("classif.ce")
@@ -150,7 +150,7 @@ bmr <- benchmark(design)
 #   "classif.log_reg", "classif.rpart", "classif.ranger", "classif.svm", "classif.xgboost.tuned"
 # ))) +
 #   theme(axis.text.x = element_text(angle = 45, hjust = 1))
-# 
+#
 # autoplot(bmr$filter(learner_ids = c(
 #   "classif.log_reg", "classif.rpart", "classif.ranger", "classif.svm", "classif.xgboost.tuned"
 # )), measure=balanced_acc_measure) +
@@ -158,8 +158,8 @@ bmr <- benchmark(design)
 
 autoplot(bmr) + theme(axis.text.x = element_text(angle = 45, hjust = 1))
 
-autoplot(bmr, measure=balanced_acc_measure) + theme(axis.text.x = element_text(angle = 45, hjust = 1))
+autoplot(bmr, measure = balanced_acc_measure) + theme(axis.text.x = element_text(angle = 45, hjust = 1))
 
 # autoplot(original_bmr) + theme(axis.text.x = element_text(angle = 45, hjust = 1))
-# 
+#
 # autoplot(original_bmr, measure=balanced_acc_measure) + theme(axis.text.x = element_text(angle = 45, hjust = 1))
