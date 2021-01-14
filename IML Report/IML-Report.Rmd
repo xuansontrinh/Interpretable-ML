@@ -3,7 +3,7 @@ title: "Interpretable Machine Learning Scope Definition Report"
 author:
   - Xuan-Son Trinh^[Ludwig Maximilian University of Munich, Son.Trinh@campus.lmu.de]
   - Victor Tuekam^[Ludwig Maximilian University of Munich, t.victor@campus.lmu.de]
-output: 
+output:
   pdf_document:
     citation_package: default
     toc: false
@@ -21,7 +21,7 @@ For the Seminar we use the South German Credit dataset, available in the UCI Mac
 The data set consists of a 1000 observations together with 21 attributes. The data was collected between 1973 and 1975. The task associated with this data set is the classification of individuals (instances) according to their credit risk ("good", "bad").
 
 
-| Attribute | Description                 |   
+| Attribute | Description                 |
 | --------- |-----------------------------|
 | status | Status of the debtor's checking account with the bank\
 (factor with 4 levels: _"no checking account"_, _"... < 0 DM"_, _"0<= ... < 200 DM"_, _"... >= 200 DM / salary for at least 1 year"_) |
@@ -59,125 +59,290 @@ The data set consists of a 1000 observations together with 21 attributes. The da
 | telephone | Is there a telephone landline registered on the debtor's name?\
 (factor with 2 levels: _"no"_, _"yes (under customer name)"_) |
 | foreign_worker | Is the debtor a foreign worker?\
-(factor with 2 levels: _"yes"_, _"no"_) | 
+(factor with 2 levels: _"yes"_, _"no"_) |
 | credit_risk | Has the credit contract been complied with (good) or not (bad)?\
 (factor with 2 levels: _"bad"_, _"good"_) |
 
 
 ## Load data
+```{r, include=FALSE}
+# Load necessary libraries
+library("mlr3verse")
+library("ggplot2")
+
+set.seed(11302020)
+lgr::get_logger("mlr3")$set_threshold("error")
+```
+
 ```{r south-german-credit}
-load("../south-german-credit.Rda")
+task <- tsk("german_credit")
 ```
 We use the `skimr` package to visualize the data distribution.
 The output is not printed here, to save space. One could observe that the data set doesn't have any missing values and require little preprocessing to fit our model.
 ```{r, eval=FALSE}
 library(skimr)
-skimr::skim(data)
+skimr::skim(task$data())
 ```
-# Fitting a black box model (xgboost)
+# Fitting some models
 The `mlr3` package and other packages from the mlr3 ecosystem are used to do the modeling.
+The fitted and tuned models are:
+- Logistic Regression
+- Decision Trees
+- Random Forest
+- Xgboost
+- Support Vector machines (with linear, polynomial, and radial kernels)
 
-```{r, include=FALSE}
-# Load necessary libraries
-library(data.table)
-library(mlr3)
-library(mlr3viz)
-library(mlr3learners)
-library(mlr3extralearners)
-library(mlr3tuning)
-library(mlr3keras)
-library(mlr3filters)
-
-library(paradox)
-
-library(ggplot2)
-library(GGally)
-library(ranger)
-library(xgboost)
-library(mboost)
-library(e1071)
-library(mltools)
-
-lgr::get_logger("mlr3")$set_threshold("error")
-```
-
-As the `xgboost` package doesn't support handling categorical features, we do some preprocessing here to convert categorical features to numeric features.
+For preprocessing, we do the following:
+- Standardize numerical variables by centering them around their mean and scaling them by their root-mean-square.
+- One-hot encode factor and ordered-factor variables.
+- To account for the class imbalance in the data set, we perform oversample of the minority class ("bad" class).
 ```{r}
-encode_ordinal <- function(x, order = unique(x)) {
-  x <- as.numeric(factor(x, levels = order, exclude = NULL))
-  x
-}
-
-data[which(sapply(data, is.ordered))] <- sapply(data[which(sapply(
-  data,
-  is.ordered
-))], encode_ordinal)
-
-cat_cols <- names(data)[which(sapply(data, is.factor))]
-cat_cols <- cat_cols[cat_cols != "credit_risk"]
-data <- data.table::as.data.table(data)
-data <- one_hot(data, cols = cat_cols)
-names(data) <- make.names(names(data))
-int_cols <- names(data)[which(sapply(data, is.integer))]
-data[, (int_cols) := lapply(.SD, as.numeric), .SDcols = int_cols]
-
-task <- TaskClassif$new("german_credit", data,
-  target = "credit_risk", positive = "good"
+# PipeOps
+fencoder <- po("encode",
+  method = "one-hot",
+  affect_columns = selector_type("factor")
+)
+ord_to_int <- po("colapply",
+  applicator = as.integer,
+  affect_columns = selector_type("ordered")
 )
 
+encoder <- fencoder %>>% ord_to_int
+
+po_over <- po("classbalancing",
+  id = "oversample", adjust = "minor",
+  reference = "minor", shuffle = FALSE, ratio = 2.3
+)
+threshold <- po("threshold")
+pos <- po("scale") %>>%
+  encoder %>>% po_over
+pos_cat <- po("scale") %>>% po_over
 ```
 ## Tuning and Benchmarking
+The parameter tuning is done with the following settings for all models. The tuning code is available in the `.Rmd` source file.
 ```{r}
-set.seed(11302020)
-classif_err_measure <- msr("classif.ce")
-classif_xgboost_learner <- lrn("classif.xgboost")
-tuner <- tnr("grid_search", resolution = 5L)
-tune_ps <- ParamSet$new(list(
-  ParamDbl$new("eta", lower = 0.01, upper = 0.3), # controls the learning rate
-  ParamDbl$new("colsample_bytree",
-    lower = 0.5, upper = 0.9
-  ), # fraction of features (variables) supplied to a tree
-  ParamInt$new("max_depth",
-    lower = 2, upper = 20
-  ), # maximum depth of the tree
-  ParamDbl$new("subsample",
-    lower = 0.5, upper = 0.8
-  ), # fraction of sample supplied to a tree
-  ParamInt$new("nrounds",
-    lower = 100, upper = 140
-  ), # maximum number of iterations
-  ParamDbl$new("gamma", lower = 0, upper = 5), # regularization controller
-  ParamDbl$new("lambda", lower = 1, upper = 4.5), # L2 regularization
-  ParamDbl$new("alpha", lower = 0, upper = 1) # L1 regularization
-))
-terminator <- trm("evals", n_evals = 5L)
-at <- AutoTuner$new(
-  learner = classif_xgboost_learner,
-  resampling = rsmp("holdout"),
-  measure = classif_err_measure,
-  search_space = tune_ps,
+# tuning settings
+inner_cv5 <- rsmp("cv", folds = 5L)
+measure <- msr("classif.bacc")
+tuner <- tnr("grid_search", resolution = 7L)
+terminator <- trm("evals", n_evals = 20)
+```
+```{r, include=FALSE}
+# Logistic regression
+log_reg_learner <- lrn("classif.log_reg", predict_type = "prob")
+log_reg_pipeline <- pos %>>% log_reg_learner %>>% threshold
+log_reg_pipeline_cat <- pos_cat %>>% log_reg_learner %>>% threshold
+log_reg_glearner <- GraphLearner$new(log_reg_pipeline, id = "log_reg")
+log_reg_glearner_cat <- GraphLearner$new(log_reg_pipeline_cat,
+  id = "log_reg_cat"
+)
+log_reg_at <- AutoTuner$new(
+  learner = log_reg_glearner,
+  resampling = inner_cv5,
+  measure = measure,
+  search_space = ParamSet$new(list(ParamDbl$new("threshold.thresholds",
+    lower = 0, upper = 1
+  ))),
   terminator = terminator,
   tuner = tuner
 )
-```
-```{r, results="hide", warning=FALSE}
-design <- benchmark_grid(
-  tasks = task,
-  learners = list(lrn("classif.log_reg"), lrn("classif.rpart"), at),
-  resamplings = rsmp("cv", folds = 5L)
+log_reg_at_cat <- AutoTuner$new(
+  learner = log_reg_glearner_cat,
+  resampling = inner_cv5,
+  measure = measure,
+  search_space = ParamSet$new(list(ParamDbl$new("threshold.thresholds",
+    lower = 0, upper = 1
+  ))),
+  terminator = terminator,
+  tuner = tuner
 )
 
+# Regression trees
+rpart_learner <- lrn("classif.rpart", predict_type = "prob")
+rpart_pipeline <- pos %>>% rpart_learner %>>% threshold
+rpart_pipeline_cat <- pos_cat %>>% rpart_learner %>>% threshold
+rpart_glearner <- GraphLearner$new(rpart_pipeline, id = "rpart")
+rpart_glearner_cat <- GraphLearner$new(rpart_pipeline_cat, id = "rpart_cat")
+
+rpart_at <- AutoTuner$new(
+  learner = rpart_glearner,
+  resampling = inner_cv5,
+  measure = measure,
+  search_space = ParamSet$new(list(ParamDbl$new("threshold.thresholds",
+    lower = 0, upper = 1
+  ))),
+  terminator = terminator,
+  tuner = tuner
+)
+rpart_at_cat <- AutoTuner$new(
+  learner = rpart_glearner_cat,
+  resampling = inner_cv5,
+  measure = measure,
+  search_space = ParamSet$new(list(ParamDbl$new("threshold.thresholds",
+    lower = 0, upper = 1
+  ))),
+  terminator = terminator,
+  tuner = tuner
+)
+
+# Random forest
+ranger_pipeline <- pos %>>% lrn("classif.ranger",
+  predict_type = "prob"
+) %>>% threshold
+ranger_pipeline_cat <- pos_cat %>>% lrn("classif.ranger",
+  predict_type = "prob"
+) %>>% threshold
+ranger_glearner <- GraphLearner$new(ranger_pipeline, id = "ranger")
+ranger_glearner_cat <- GraphLearner$new(ranger_pipeline_cat, id = "ranger_cat")
+
+ranger_tune_ps <- ParamSet$new(list(
+  ParamDbl$new("threshold.thresholds", lower = 0, upper = 1),
+  ParamInt$new("classif.ranger.num.trees",
+    lower = 100, upper = 140
+  ), # number of trees
+  ParamInt$new("classif.ranger.mtry",
+    lower = 1, upper = ceiling(task$ncol / 2)
+  ), # number of variables to possibly split at in each node
+  ParamInt$new("classif.ranger.max.depth",
+    lower = 2, upper = 20
+  ) # maximum depth of the tree
+))
+
+ranger_at <- AutoTuner$new(
+  learner = ranger_glearner,
+  resampling = inner_cv5,
+  measure = measure,
+  search_space = ranger_tune_ps,
+  terminator = terminator,
+  tuner = tuner
+)
+ranger_at_cat <- AutoTuner$new(
+  learner = ranger_glearner_cat,
+  resampling = inner_cv5,
+  measure = measure,
+  search_space = ranger_tune_ps,
+  terminator = terminator,
+  tuner = tuner
+)
+
+
+# Svms
+linear_svm_learner <- lrn("classif.svm",
+  type = "C-classification", kernel = "linear",
+  predict_type = "prob"
+)
+poly_svm_learner <- lrn("classif.svm",
+  type = "C-classification", kernel = "polynomial",
+  predict_type = "prob"
+)
+radial_svm_learner <- lrn("classif.svm",
+  type = "C-classification", kernel = "radial",
+  predict_type = "prob"
+)
+
+# Pipelines
+linear_svm_pipeline <- pos %>>% linear_svm_learner %>>% threshold
+poly_svm_pipeline <- pos %>>% poly_svm_learner %>>% threshold
+radial_svm_pipeline <- pos %>>% radial_svm_learner %>>% threshold
+
+# Learners
+linear_svm_glearner <- GraphLearner$new(linear_svm_pipeline, id = "linear_svm")
+poly_svm_glearner <- GraphLearner$new(poly_svm_pipeline, id = "poly_svm")
+radial_svm_glearner <- GraphLearner$new(radial_svm_pipeline, id = "radial_svm")
+
+# Search spaces
+poly_svm_search_space <- ParamSet$new(list(
+  ParamDbl$new("threshold.thresholds", lower = 0, upper = 1),
+  ParamDbl$new("classif.svm.cost", lower = 0.01, upper = 100),
+  ParamDbl$new("classif.svm.gamma", lower = 0.0001, upper = 1),
+  ParamInt$new("classif.svm.degree", lower = 1, upper = 4)
+))
+
+radial_svm_search_space <- ParamSet$new(list(
+  ParamDbl$new("threshold.thresholds", lower = 0, upper = 1),
+  ParamDbl$new("classif.svm.cost", lower = 0.01, upper = 100),
+  ParamDbl$new("classif.svm.gamma", lower = 0.0001, upper = 1)
+))
+
+linear_svm_search_space <- ParamSet$new(list(
+  ParamDbl$new("threshold.thresholds", lower = 0, upper = 1),
+  ParamDbl$new("classif.svm.cost", lower = 0.01, upper = 100)
+))
+
+linear_svm_at <- AutoTuner$new(
+  learner = linear_svm_glearner,
+  resampling = inner_cv5,
+  terminator = terminator,
+  search_space = linear_svm_search_space,
+  tuner = tuner,
+  measure = measure
+)
+poly_svm_at <- AutoTuner$new(
+  learner = poly_svm_glearner,
+  resampling = inner_cv5,
+  terminator = terminator,
+  search_space = poly_svm_search_space,
+  tuner = tuner,
+  measure = measure
+)
+radial_svm_at <- AutoTuner$new(
+  learner = radial_svm_glearner,
+  resampling = inner_cv5,
+  terminator = terminator,
+  search_space = radial_svm_search_space,
+  tuner = tuner,
+  measure = measure
+)
+```
+```{r, include=FALSE, cache=TRUE}
+outer_cv3 <- rsmp("cv", folds = 3L)
+design <- benchmark_grid(
+  task = task,
+  learners = list(
+    log_reg_at,
+    rpart_at,
+    ranger_at,
+    linear_svm_at,
+    poly_svm_at,
+    radial_svm_at
+  ),
+  resamplings = outer_cv3
+)
+# design_cat <- benchmark_grid(
+#  task = task,
+#  learners = list(
+#    log_reg_at_cat,
+#    rpart_at_cat,
+#    ranger_at_cat
+#  ),
+#  resamplings = outer_cv3
+# )
+# benchmark
 bmr <- benchmark(design)
+# bmr_cat <- benchmark(design_cat)
 ```
 
 ```{r}
-autoplot(bmr$filter(learner_ids = c(
-  "classif.log_reg",
-  "classif.rpart", "classif.xgboost.tuned"
-))) +
+bmr$aggregate(measure)
+autoplot(bmr, measure = msr("classif.ce")) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+autoplot(bmr, measure = msr("classif.fbeta")) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+autoplot(bmr, measure = measure) +
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
 ```
-The benchmark shows that the xgboost blackbox model is more performant on average than logistic regression and regression trees, which are interpretable models.
+The benchmark shows that the svm model with `radial` kernel is most performant on average. This model is a black box model.
+
+We also observe that the performace of tree based models doesn't change significantly, when categorical variables are not coverted to numerics.
+```{r}
+# bmr_cat$aggregate(measure)
+# autoplot(bmr_cat, measure = msr("classif.ce")) +
+#   theme(axis.text.x = element_text(angle = 45, hjust = 1))
+# autoplot(bmr_cat, measure = msr("classif.fbeta")) +
+#   theme(axis.text.x = element_text(angle = 45, hjust = 1))
+# autoplot(bmr_cat, measure = measure) +
+#   theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
 
 # Interpretable Machine Learning Methods and Hypotheses
 We first give a brief description of some interpretable machine learning methods we would use to investigate our hypotheses. The methods are more thoroughly described in the Interpertable Machine Learning book^[https://christophm.github.io/interpretable-ml-book/].
@@ -185,23 +350,23 @@ We first give a brief description of some interpretable machine learning methods
 ## Interpretable Machine Learning Methods
 
 ### Feature Effects
-  
+
 **Partial Dependence Plot:** It shows the marginal effect a feature has on the output of a model.
-  
+
 **SHAP Dependence Plots:** An alternative to Partial Dependence Plot to visualize feature effects on the model output.
 
 **SHAP Summary Plots:** Visualizes feature importance and effects in a single plot.
 
 ### Global Feature Importance
-  
+
 **Permutation Feature Importance:** It measures the increase in prediction error after permuting the feature values.
 
 ### Feature Interaction
-  
+
 **H-Statistic:** Friedman's H-Statistic can tell us two things. (1) Whether and to what extent a feature interacts with all other features in the model and (2) whether and to what extent two features interact with one-another.
 
 ### Local Interpretation Methods
-  
+
 **Anchors:** Provides an "anchor" explanation of individual model predictions. The "anchor" explanation is a decision rule, where-in unaccounted variables do not affect the prediction.
 
 ### Example-Based Explanations
