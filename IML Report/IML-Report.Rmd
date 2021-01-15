@@ -116,7 +116,6 @@ po_over <- po("classbalancing",
 threshold <- po("threshold")
 pos <- po("scale") %>>%
   encoder %>>% po_over
-pos_cat <- po("scale") %>>% po_over
 ```
 ## Tuning and Benchmarking
 The parameter tuning is done with the following settings for all models. The tuning code is available in the `.Rmd` source file.
@@ -131,23 +130,10 @@ terminator <- trm("evals", n_evals = 20)
 # Logistic regression
 log_reg_learner <- lrn("classif.log_reg", predict_type = "prob")
 log_reg_pipeline <- pos %>>% log_reg_learner %>>% threshold
-log_reg_pipeline_cat <- pos_cat %>>% log_reg_learner %>>% threshold
 log_reg_glearner <- GraphLearner$new(log_reg_pipeline, id = "log_reg")
-log_reg_glearner_cat <- GraphLearner$new(log_reg_pipeline_cat,
-  id = "log_reg_cat"
-)
+
 log_reg_at <- AutoTuner$new(
   learner = log_reg_glearner,
-  resampling = inner_cv5,
-  measure = measure,
-  search_space = ParamSet$new(list(ParamDbl$new("threshold.thresholds",
-    lower = 0, upper = 1
-  ))),
-  terminator = terminator,
-  tuner = tuner
-)
-log_reg_at_cat <- AutoTuner$new(
-  learner = log_reg_glearner_cat,
   resampling = inner_cv5,
   measure = measure,
   search_space = ParamSet$new(list(ParamDbl$new("threshold.thresholds",
@@ -160,22 +146,10 @@ log_reg_at_cat <- AutoTuner$new(
 # Regression trees
 rpart_learner <- lrn("classif.rpart", predict_type = "prob")
 rpart_pipeline <- pos %>>% rpart_learner %>>% threshold
-rpart_pipeline_cat <- pos_cat %>>% rpart_learner %>>% threshold
 rpart_glearner <- GraphLearner$new(rpart_pipeline, id = "rpart")
-rpart_glearner_cat <- GraphLearner$new(rpart_pipeline_cat, id = "rpart_cat")
 
 rpart_at <- AutoTuner$new(
   learner = rpart_glearner,
-  resampling = inner_cv5,
-  measure = measure,
-  search_space = ParamSet$new(list(ParamDbl$new("threshold.thresholds",
-    lower = 0, upper = 1
-  ))),
-  terminator = terminator,
-  tuner = tuner
-)
-rpart_at_cat <- AutoTuner$new(
-  learner = rpart_glearner_cat,
   resampling = inner_cv5,
   measure = measure,
   search_space = ParamSet$new(list(ParamDbl$new("threshold.thresholds",
@@ -189,11 +163,7 @@ rpart_at_cat <- AutoTuner$new(
 ranger_pipeline <- pos %>>% lrn("classif.ranger",
   predict_type = "prob"
 ) %>>% threshold
-ranger_pipeline_cat <- pos_cat %>>% lrn("classif.ranger",
-  predict_type = "prob"
-) %>>% threshold
 ranger_glearner <- GraphLearner$new(ranger_pipeline, id = "ranger")
-ranger_glearner_cat <- GraphLearner$new(ranger_pipeline_cat, id = "ranger_cat")
 
 ranger_tune_ps <- ParamSet$new(list(
   ParamDbl$new("threshold.thresholds", lower = 0, upper = 1),
@@ -216,15 +186,6 @@ ranger_at <- AutoTuner$new(
   terminator = terminator,
   tuner = tuner
 )
-ranger_at_cat <- AutoTuner$new(
-  learner = ranger_glearner_cat,
-  resampling = inner_cv5,
-  measure = measure,
-  search_space = ranger_tune_ps,
-  terminator = terminator,
-  tuner = tuner
-)
-
 
 # Svms
 linear_svm_learner <- lrn("classif.svm",
@@ -308,21 +269,12 @@ design <- benchmark_grid(
   ),
   resamplings = outer_cv3
 )
-# design_cat <- benchmark_grid(
-#  task = task,
-#  learners = list(
-#    log_reg_at_cat,
-#    rpart_at_cat,
-#    ranger_at_cat
-#  ),
-#  resamplings = outer_cv3
-# )
-# benchmark
 bmr <- benchmark(design)
-# bmr_cat <- benchmark(design_cat)
 ```
 
 ```{r}
+bmr$aggregate(msr("classif.ce"))
+bmr$aggregate(msr("classif.fbeta"))
 bmr$aggregate(measure)
 autoplot(bmr, measure = msr("classif.ce")) +
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
@@ -334,15 +286,6 @@ autoplot(bmr, measure = measure) +
 The benchmark shows that the svm model with `radial` kernel is most performant on average. This model is a black box model.
 
 We also observe that the performace of tree based models doesn't change significantly, when categorical variables are not coverted to numerics.
-```{r}
-# bmr_cat$aggregate(measure)
-# autoplot(bmr_cat, measure = msr("classif.ce")) +
-#   theme(axis.text.x = element_text(angle = 45, hjust = 1))
-# autoplot(bmr_cat, measure = msr("classif.fbeta")) +
-#   theme(axis.text.x = element_text(angle = 45, hjust = 1))
-# autoplot(bmr_cat, measure = measure) +
-#   theme(axis.text.x = element_text(angle = 45, hjust = 1))
-```
 
 # Interpretable Machine Learning Methods and Hypotheses
 We first give a brief description of some interpretable machine learning methods we would use to investigate our hypotheses. The methods are more thoroughly described in the Interpertable Machine Learning book^[https://christophm.github.io/interpretable-ml-book/].
