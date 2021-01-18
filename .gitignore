@@ -41,3 +41,5 @@ vignettes/*.pdf
 # output files (pdf, html)
 *.pdf
 *.html
+*.tex
+*.log
