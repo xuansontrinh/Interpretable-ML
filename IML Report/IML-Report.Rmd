@@ -3,12 +3,19 @@ title: "Interpretable Machine Learning Scope Definition Report"
 author:
   - Xuan-Son Trinh^[Ludwig Maximilian University of Munich, Son.Trinh@campus.lmu.de]
   - Victor Tuekam^[Ludwig Maximilian University of Munich, t.victor@campus.lmu.de]
-output:
-  pdf_document:
+# output:
+#   pdf_document:
+#     citation_package: default
+#     toc: false
+#     number_sections: true
+#     latex_engine: xelatex
+output: 
+  bookdown::pdf_document2:
     citation_package: default
     toc: false
-    number_sections: true
-    latex_engine: xelatex
+    # toc_depth: 5
+    # pandoc_args: [ "--csl", "acm-sig-proceedings.csl"]
+    keep_tex: yes
 ---
 
 ```{r setup, include=FALSE}
@@ -34,7 +41,7 @@ The data set consists of a 1000 observations together with 21 attributes. The da
 | savings| Debtor's savings\
 (factor with 5 levels:  _"unknown/no savings account"_, _"... <  100 DM"_, _"100 <= ... <  500 DM"_, _"500 <= ... < 1000 DM"_, _"... >= 1000 DM"_) |
 | employment_duration| Duration of debtor's employment with current employer\
-(ordered factor with 5 levels: _"unemployed"_ < _"< 1 yr"_ < _"1 <= ... < 4 yrs"_ < _"4 <= ... < 7 yrs"_ < _">= 7 yrs"_) |
+(factor with 5 levels: _"unemployed"_, _"< 1 yr"_, _"1 <= ... < 4 yrs"_, _"4 <= ... < 7 yrs"_, _">= 7 yrs"_) |
 | installment_rate| Credit installments as a percentage of debtor's disposable income\
 (ordered factor with 4 levels: _">= 35"_ < _"25 <= ... < 35"_ < _"20 <= ... < 25"_ < _"< 20"_) |
 | personal_status_sex | Combined information on sex and marital status\
@@ -63,35 +70,42 @@ The data set consists of a 1000 observations together with 21 attributes. The da
 | credit_risk | Has the credit contract been complied with (good) or not (bad)?\
 (factor with 2 levels: _"bad"_, _"good"_) |
 
-
+\newpage
 ## Load data
 ```{r, include=FALSE}
 # Load necessary libraries
 library("mlr3verse")
 library("ggplot2")
 
-set.seed(11302020)
+set.seed(20211301)
 lgr::get_logger("mlr3")$set_threshold("error")
 ```
 
-```{r south-german-credit}
-task <- tsk("german_credit")
+```{r}
+load("south-german-credit.Rda")
+task <- TaskClassif$new("german-credit", 
+                        backend = data, 
+                        target = "credit_risk", 
+                        positive = "good")
 ```
-We use the `skimr` package to visualize the data distribution.
-The output is not printed here, to save space. One could observe that the data set doesn't have any missing values and require little preprocessing to fit our model.
-```{r, eval=FALSE}
-library(skimr)
-skimr::skim(task$data())
+ 
+
+```{r, warning=FALSE}
+summary(data)
 ```
+The data set doesn't have any missing values and requires little preprocessing to fit our model. It can also be pointed out that the data has class-imbalance problem: The number of "good" credited people is more than twice the number of "bad" credited people (700 to 300).
+
 # Fitting some models
 The `mlr3` package and other packages from the `mlr3` ecosystem are used to do the modeling.
 The fitted and tuned models are:
 
 - Logistic Regression
-- Decision Trees
+- Decision Tree
 - Random Forest
 - Xgboost
 - Support Vector machines (with linear, polynomial, and radial kernels)
+
+, in which, logistic regression and decision tree are considered as explainable baseline models; random forest, Xgboost and support vector machines with multiple kernel types as blackbox models.
 
 For preprocessing, we do the following:
 
@@ -128,9 +142,8 @@ measure <- msr("classif.bacc")
 tuner <- tnr("grid_search", resolution = 7L)
 terminator <- trm("evals", n_evals = 20)
 ```
-The benchmark shows that the svm model with `radial` kernel is most performant on average as shown in Figure 1. This model is a black box model.
 
-```{r, include=FALSE, eval=FALSE}
+```{r, eval=FALSE}
 # Logistic regression
 log_reg_learner <- lrn("classif.log_reg", predict_type = "prob")
 log_reg_pipeline <- pos %>>% log_reg_learner %>>% threshold
@@ -280,11 +293,16 @@ bmr <- benchmark(design)
 autoplot(bmr, measure = msr("classif.fbeta")) +
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
 ```
-```{r results, out.width='60%', fig.align='center', fig.cap='Evaluation', echo=FALSE}
+```{r evaluation-results, out.width='80%', fig.align='center', fig.cap="Evaluation", echo=FALSE}
 knitr::include_graphics("plots/fbeta.jpeg")
 ```
 
-We also observe that the performace of tree based models doesn't change significantly, when categorical variables are not coverted to numerics (See box plots in Figure labeled `fct_`).
+As can be seen from the Figure \@ref(fig:evaluation-results), the tuned SVM using radial basis kernel has the best performance (highest F1 score) and therefore is used for subsequent interpretations. We also observe that the performace of tree based models doesn't change significantly, when categorical variables are not coverted to numerics (See box plots in Figure labeled `fct_`).
+
+```{r, eval=FALSE}
+radial_svm_at$predict_type = "prob"
+radial_svm_at$train(task)
+```
 
 # Interpretable Machine Learning Methods and Hypotheses
 We first give a brief description of some interpretable machine learning methods we would use to investigate our hypotheses. The methods are more thoroughly described in the Interpertable Machine Learning book^[https://christophm.github.io/interpretable-ml-book/].
@@ -293,9 +311,11 @@ We first give a brief description of some interpretable machine learning methods
 
 ### Feature Effects
 
-**Partial Dependence Plot:** It shows the marginal effect a feature has on the output of a model.
+**Partial Dependence Plot (PDP):** It shows the marginal effect a feature has on the output of a model.
 
-**SHAP Dependence Plots:** An alternative to Partial Dependence Plot to visualize feature effects on the model output.
+**Accumulated Local Effects (ALE) Plots:** A faster and unbiased alternative to PDP. It calculates the differences in predictions instead of averages.
+
+**SHAP Dependence Plots:** An alternative to PDP to visualize feature effects on the model output.
 
 **SHAP Summary Plots:** Visualizes feature importance and effects in a single plot.
 
@@ -317,22 +337,122 @@ We first give a brief description of some interpretable machine learning methods
 
 
 ## Hypotheses and Suggested IML Methods
+To work on this part, we use the IML methods implemented in the package `iml`
+```{r, eval=FALSE}
+library(iml)
+```
+
 |Hypothesis|IML Method|
 |----------|----------|
-|Having no `property` should imply a bad `credit_risk`|Partial Dependence Plot|
-|Is being older better for `credit_risk`|Partial Dependence Plot, SHAP Dependence Plot & SHAP Summary PLot|
-|Is the effect of `age` dependent on the effect of `property` on the `credit_risk` ? |H-Statistic|
-|The variable `telephone` should not affect the output|SHAP Summary Plot|
 |What are the most important features for the prediction of the `credit_risk`|Permutation Featurn Importance|
+|Having no `property` should imply a bad `credit_risk`|ALE|
+|Is being older better for `credit_risk`|ALE|
 |Is there an interaction between `job` and `credit_history`? People with delayed `credit_history` often have low quality `job`|H-Statistic|
 |What is the smallest change in `number_credits` that can toggle the model output from `good` to `bad`|Counterfactual Explanations|
 |People with high quality `job`s have good `credit_risk`|SHAP Feature Importance & SHAP Summary Plots|
-|How does `job` quality interact with the checking account `status` |H-Statistic|
-|High number of `people_liable` associate with bad `credit_risk`|Partial Dependence Plot|
-|Does `age` and `people_liable` interact ?|H-Statistic|
+|How strong is the interaction between each feature and other features in German Credit Dataset?|H-Statistic|
 |Does having no `property` mean bad `credit_risk` and how does this relate to age|Anchors, H-Statistic|
-|Being a foreign worker does not affect your credit risk. If this feature is important for prediction, this implies discrimination|SHAP Feature Importance & SHAP Summary Plots|
+|Being a foreign worker does not affect your credit risk. If this feature is important for prediction, this implies discrimination|Permutation Feature Importance & ALE|
 |The better the savings, the better your credit risk|Permutation Feature Importance, SHAP Feature Importance & SHAP Summary Plots|
-|How does a change in the `savings` threshold change the `credit_risk`|Counterfactual Explanations|
-|The higher the `installment_rate` the worse the `credit_risk`|Partial Dependence Plot, SHAP Dependence Plot & SHAP Summary Plots|
+|How does a change in the `savings` threshold change the `credit_risk`|ALE, Counterfactual Explanations|
+|The higher the `installment_rate` the better the `credit_risk`|Partial Dependence Plot, SHAP Dependence Plot & SHAP Summary Plots|
 |Does owning a house (`housing`) mean good `credit_risk`|Partial Dependence Plot, SHAP Dependence Plot & SHAP Summary Plot|
+
+1. What are the most important features for the prediction of the `credit_risk`?\
+The importance of features can be uncovered using Permutation Feature Importance (Figure \@ref(fig:feature-importance)). Through the increase in the prediction error, we can see that the most important feature for predicting `credit_risk` is `status` of your checking account, which stands out from the other features of the dataset. It is followed by `duration`, `purpose`, `amount`, `credit_history`, `installment_rate`, etc. with gradual decrease in the importance.
+```{r, eval=FALSE}
+imp <- FeatureImp$new(model, loss="ce")
+plot(imp)
+```
+```{r feature-importance, out.width='80%', fig.align='center', fig.cap="German Credit Feature Importance", echo=FALSE}
+knitr::include_graphics("plots/feature_importance_ce.jpg")
+```
+
+
+2. Having no `property` should imply a bad `credit_risk`\
+NaN
+
+
+3. Is being older better for `credit_risk`?\
+To answer this question, we use the ALE plot (Figure \@ref(fig:ale-age)). The ALE plot shows a linear relationship between the predicted probability and `age`. The model confirms that the older we get, the better influence we have on the credit score.
+```{r, eval=FALSE}
+eff <- FeatureEffect$new(model, feature = c("age"), method='ale')
+eff$plot()
+```
+```{r ale-age, out.width='80%', fig.align='center', fig.cap="ALE Plot of `age`", echo=FALSE}
+knitr::include_graphics("plots/ale_age.jpg")
+```
+
+4. Is there an interaction between `job` and `credit_history`? People with delayed `credit_history` often have low quality `job`\
+NaN
+
+5. What is the smallest change in `number_credits` that can toggle the model output from `good` to `bad`?\
+NaN
+
+6. People with high quality `job`s have good `credit_risk`\
+ALE plot continues to be used to answer this question (Figure \@ref(fig:ale-job)). According to the plot, being unskilled and non-resident or being manager/high qualified employee causes a loss in your credit score while being skilled employees or just being a resident can have a positive effect on your credit score. This raises some questions for us to think about. Why are both unskilled but 
+being resident has good effect on the credit and bad effect otherwise? Is it some kind of discrimination to foreigners? The plot also shows that being a high-qualified employee has the worst effect on the credit, which is an absurd thing. These may be explained due to the fact that the dataset is relatively small so it may possess high variance.
+```{r, eval=FALSE}
+eff <- FeatureEffect$new(model, feature = c("job"), method='ale')
+eff$plot()
+```
+```{r ale-job, out.width='80%', fig.align='center', fig.cap="ALE Plot of `job`", echo=FALSE}
+knitr::include_graphics("plots/ale_job.jpg")
+```
+
+7. How strong is the interaction between each feature and all other features in German Credit Dataset?\
+To answer the question, we calculate the H-statistic between each feature and all other features. The result is presented in Figure \@ref(fig:interaction). As can be seen, the interactions are not strong where the highest is just approximately 0.11.
+```{r, eval=FALSE}
+ia <- Interaction$new(model)
+plot(ia)
+```
+```{r interaction, out.width='80%', fig.align='center', fig.cap="Interaction Strength (H-Statistic) between each feature and all other features", echo=FALSE}
+knitr::include_graphics("plots/interaction.jpg")
+```
+
+8. Does having no `property` mean bad `credit_risk` and how does this relate to age\
+NaN
+
+9. Being a foreign worker does not affect your credit risk. If this feature is important for prediction, this implies discrimination.\
+As can be seen from Figure \ref(fig:feature-importance), `foreign_worker` is the 6th least important feature in 20 features in total. Looking at the ALE plot for `foreign_worker` in Figure \ref(fig:ale-foreign-worker), we notice a strange phenomenon. If you are a foreign worker, it brings positive effect to your credit, and otherwise, a slight negative effect. However, this can be explained by the distribution of the feature (Figure \ref(fig:geom-bar-foreign-worker)). The proportion of foreign workers is less than 4% the proportion of native workers (37 to 963) and almost 90% of the foreign workers in the dataset has good credit however only about 70% of the native workers in the dataset has good credit.
+
+```{r}
+summary(data$foreign_worker)
+```
+
+```{r, eval=FALSE}
+eff <- FeatureEffect$new(model, feature = c("foreign_worker"))
+eff$plot()
+```
+```{r ale-foreign-worker, out.width='80%', fig.align='center', fig.cap="ALE Plot for `foreign_worker`", echo=FALSE}
+knitr::include_graphics("plots/ale_foreign_worker.jpg")
+```
+
+```{r, eval=FALSE}
+ggplot(data = data, mapping = aes(x = foreign_worker, fill = credit_risk)) + geom_bar()
+```
+```{r geom-bar-foreign-worker, out.width='80%', fig.align='center', fig.cap="Bar Plot for `foreign_worker` with distribution of `credit_risk` in each level", echo=FALSE}
+knitr::include_graphics("plots/geom_bar_foreign_worker.jpg")
+```
+
+10. The better the savings, the better your credit risk\
+We continue to use ALE plot to answer this question. Looking at the plot in Figure \ref(fig:ale-savings), it is clear that the more money for savings, the more positive effect it has on your credit risk. And if there is no savings account, the credit can suffer.
+```{r, eval=FALSE}
+eff <- FeatureEffect$new(model, feature = c("savings"))
+eff$plot()
+```
+```{r ale-savings, out.width='80%', fig.align='center', fig.cap="ALE Plot for `savings`", echo=FALSE}
+knitr::include_graphics("plots/ale_savings.jpg")
+```
+
+11. The higher the `installment_rate` the better the `credit_risk`\
+NaN
+
+12. Does owning a house (`housing`) mean good `credit_risk`\
+NaN
+
+
+
+
+
+
