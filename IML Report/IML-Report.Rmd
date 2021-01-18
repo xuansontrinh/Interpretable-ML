@@ -340,9 +340,9 @@ We first give a brief description of some interpretable machine learning methods
 ## Story Time
 Bob is a 30 year old, data scientist in Munich. He has been married for 5 years with no kids. He recently got interested in Interpretable machine learning and works on it in his spare time.
 Bob likes learning by doing, and so he looks very hard for an interesting problem to investigate. Suddenly, he recalls a conversation with his best friend, James, who wanted to purchase a car but was surprisingly denied a credit from the bank to do so. James is a Doctor, the same age as bob, but he is single. In order to help his friend understand the bank's decision, he decides to investigate the problem, but for that he needs a data set.
-After a few minutes of googling, he finds the very well known south german credit data set. As he doesn't have the bank's machine learning model, he fits his own model on the data set. His model performs really well on test data, which reassures him that it can be used in place of the bank's model. He also applies the model on his self, as he has been thinking about moving out of their current appartment and buying a house soon for him and his wife. The model predicts a `bad` credit_risk. Now all that's left to do is for him to understand the model using IML methods and then look into his and his friends case. 
+After a few minutes of googling, he finds the very well known south german credit data set. As he doesn't have the bank's machine learning model, he fits his own model on the data set. His model performs really well on test data, which reassures him that it can be used in place of the bank's model. He also applies the model on his self, as he has been thinking about moving out of their current appartment and buying a house soon for him and his wife. The model predicts a _bad_ `credit_risk`. Now all that's left to do is for him to understand the model using IML methods and then look into his and his friends case. 
 
-In order to do so, he divides the problem in to two. First, he wants to get a general understanding of the model and verify that it's predictions make sense. Seconds, he would investigate, much like a detective, his and his friend's case.
+In order to do so, he divides the problem in to two. First, he wants to get a general understanding of the model and verify that its predictions make sense. Seconds, he would investigate, much like a detective, his and his friend's case.
 
 To get a general understanding of the model, he formulates the following hypotheses together with the IML methods he intends to use.
 
@@ -434,7 +434,7 @@ knitr::include_graphics("plots/interaction.jpg")
 ```
 
 8. Being a foreign worker does not affect your credit risk. If this feature is important for prediction, this implies discrimination.\
-As can be seen from Figure \ref(fig:feature-importance), `foreign_worker` is the 6th least important feature in 20 features in total. Looking at the ALE plot for `foreign_worker` in Figure \ref(fig:ale-foreign-worker), we notice a strange phenomenon. If you are a foreign worker, it brings positive effect to your credit, and otherwise, a slight negative effect. However, this can be explained by the distribution of the feature (Figure \ref(fig:geom-bar-foreign-worker)). The proportion of foreign workers is less than 4% the proportion of native workers (37 to 963) and almost 90% of the foreign workers in the dataset has good credit however only about 70% of the native workers in the dataset has good credit.
+As can be seen from Figure \@ref(fig:feature-importance), `foreign_worker` is the 6th least important feature in 20 features in total. Looking at the ALE plot for `foreign_worker` in Figure \@ref(fig:ale-foreign-worker), we notice a strange phenomenon. If you are a foreign worker, it brings positive effect to your credit, and otherwise, a slight negative effect. However, this can be explained by the distribution of the feature (Figure \@ref(fig:geom-bar-foreign-worker)). The proportion of foreign workers is less than 4% the proportion of native workers (37 to 963) and almost 90% of the foreign workers in the dataset has good credit however only about 70% of the native workers in the dataset has good credit.
 
 ```{r}
 summary(data$foreign_worker)
@@ -444,7 +444,7 @@ summary(data$foreign_worker)
 eff <- FeatureEffect$new(model, feature = c("foreign_worker"))
 eff$plot()
 ```
-```{r ale-foreign-worker, out.width='80%', fig.align='center', fig.cap="ALE Plot for `foreign_worker`", echo=FALSE}
+```{r ale-foreign-worker, out.width='80%', fig.align='center', fig.cap="ALE Plot for `foreign-worker`", echo=FALSE}
 knitr::include_graphics("plots/ale_foreign_worker.jpg")
 ```
 
@@ -452,7 +452,7 @@ knitr::include_graphics("plots/ale_foreign_worker.jpg")
 ggplot(data = data, mapping = aes(x = foreign_worker, fill = credit_risk)) +
   geom_bar()
 ```
-```{r geom-bar-foreign-worker, out.width='80%', fig.align='center', fig.cap="Bar Plot for `foreign_worker` with distribution of `credit_risk` in each level", echo=FALSE}
+```{r geom-bar-foreign-worker, out.width='80%', fig.align='center', fig.cap="Bar Plot for `foreign-worker` with distribution of `credit-risk` in each level", echo=FALSE}
 knitr::include_graphics("plots/geom_bar_foreign_worker.jpg")
 ```
 
