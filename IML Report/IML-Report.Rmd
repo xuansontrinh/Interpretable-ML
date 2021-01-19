@@ -3,19 +3,11 @@ title: "Interpretable Machine Learning Scope Definition Report"
 author:
   - Xuan-Son Trinh^[Ludwig Maximilian University of Munich, Son.Trinh@campus.lmu.de]
   - Victor Tuekam^[Ludwig Maximilian University of Munich, t.victor@campus.lmu.de]
-# output:
-#   pdf_document:
-#     citation_package: default
-#     toc: false
-#     number_sections: true
-#     latex_engine: xelatex
-output: 
+output:
   bookdown::pdf_document2:
     citation_package: default
     toc: false
-    # toc_depth: 5
-    # pandoc_args: [ "--csl", "acm-sig-proceedings.csl"]
-    keep_tex: yes
+    fig_caption: yes
 ---
 
 ```{r setup, include=FALSE}
@@ -89,7 +81,6 @@ task <- TaskClassif$new("german-credit",
   positive = "good"
 )
 ```
- 
 
 ```{r, warning=FALSE}
 summary(data)
@@ -298,12 +289,7 @@ autoplot(bmr, measure = msr("classif.fbeta")) +
 knitr::include_graphics("plots/fbeta.jpeg")
 ```
 
-As can be seen from the Figure \@ref(fig:evaluation-results), the tuned SVM using radial basis kernel has the best performance (highest F1 score) and therefore is used for subsequent interpretations. We also observe that the performace of tree based models doesn't change significantly, when categorical variables are not coverted to numerics (See box plots in Figure labeled `fct_`).
-
-```{r, eval=FALSE}
-radial_svm_at$predict_type <- "prob"
-radial_svm_at$train(task)
-```
+As can be seen in Figure \@ref(fig:evaluation-results), the tuned SVM using radial basis kernel has the best performance (highest F1 score) and therefore is used for subsequent interpretations. We also observe that the performace of tree based models doesn't change significantly, when categorical variables are not coverted to numerics (See box plots in Figure labeled `fct_`).
 
 # Interpretable Machine Learning Methods and Hypotheses
 We first give a brief description of some interpretable machine learning methods we would use to investigate our hypotheses. The methods are more thoroughly described in the Interpertable Machine Learning book^[https://christophm.github.io/interpretable-ml-book/].
@@ -311,8 +297,6 @@ We first give a brief description of some interpretable machine learning methods
 ## Interpretable Machine Learning Methods
 
 ### Feature Effects
-
-**Partial Dependence Plot (PDP):** It shows the marginal effect a feature has on the output of a model.
 
 **Accumulated Local Effects (ALE) Plots:** A faster and unbiased alternative to PDP. It calculates the differences in predictions instead of averages.
 
@@ -330,7 +314,7 @@ We first give a brief description of some interpretable machine learning methods
 
 ### Local Interpretation Methods
 
-**Anchors:** Provides an "anchor" explanation of individual model predictions. The "anchor" explanation is a decision rule, where-in unaccounted variables do not affect the prediction.
+**Local Surrogate (LIME):** Surrogate models are trained to approximate the predictions of a blackbox model. LIME (Local interpretable model-agnostic explanations) focuses on traing local surrogate models to explain individual predictions.
 
 ### Example-Based Explanations
 
@@ -338,113 +322,148 @@ We first give a brief description of some interpretable machine learning methods
 
 
 ## Story Time
-Bob is a 30 year old, data scientist in Munich. He has been married for 5 years with no kids. He recently got interested in Interpretable machine learning and works on it in his spare time.
-Bob likes learning by doing, and so he looks very hard for an interesting problem to investigate. Suddenly, he recalls a conversation with his best friend, James, who wanted to purchase a car but was surprisingly denied a credit from the bank to do so. James is a Doctor, the same age as bob, but he is single. In order to help his friend understand the bank's decision, he decides to investigate the problem, but for that he needs a data set.
-After a few minutes of googling, he finds the very well known south german credit data set. As he doesn't have the bank's machine learning model, he fits his own model on the data set. His model performs really well on test data, which reassures him that it can be used in place of the bank's model. He also applies the model on his self, as he has been thinking about moving out of their current appartment and buying a house soon for him and his wife. The model predicts a _bad_ `credit_risk`. Now all that's left to do is for him to understand the model using IML methods and then look into his and his friends case. 
+Bob is a 30 year old, senior data scientist in Munich. He has been married for 5 years with no kids. He recently got interested in Interpretable machine learning and works on it in his spare time.
+Bob likes learning by doing, and so he looks very hard for an interesting problem to investigate. Suddenly, he recalls a conversation with his best friend, James, who wanted to purchase a car and got a credit from the bank to do so. James is a Doctor, the same age as bob, but he is single. This makes Bob curious about credit risk predicitions. So he decides to investigate the problem, but for that he needs a data set.
+After a few minutes of googling, he finds the very well known south german credit data set. As he doesn't have the bank's machine learning model, he fits his own model on the data set. His model performs really well on test data, which reassures him that it can be used in place of the bank's model. He also applies the model on him self, as he has been thinking of starting his own company and might need to take a loan from a bank to start off. The model predicts a _bad_ `credit_risk` for him. This motivates him to understand the model even more, perhaps with the aim of playing the system a bit. Now all that's left to do is for him to understand the model using IML methods and then look into his and his friends case.
 
-In order to do so, he divides the problem in to two. First, he wants to get a general understanding of the model and verify that its predictions make sense. Seconds, he would investigate, much like a detective, his and his friend's case.
+In order to do so, he divides the problem into two. First, he wants to get a general understanding of the model and verify that its predictions make sense. Seconds, he would investigate, much like a detective, his and his friend's case (Bob's and Jame's feature instances are shown below).
+```{r, include=FALSE}
+library("iml")
+```
+```{r individual-features}
+bob <-
+  data.frame(
+    "age" = 30,
+    "amount" = 18424,
+    "credit_history" = "no credits taken/all credits paid back duly",
+    "duration" = 60, # 5 years
+    "employment_duration" = "4 <= ... < 7 yrs",
+    "foreign_worker" = "no",
+    "housing" = "rent",
+    "installment_rate" = "< 20",
+    "job" = "manager/self-empl./highly qualif. employee",
+    "number_credits" = "1",
+    "other_debtors" = "none",
+    "other_installment_plans" = "none",
+    "people_liable" = "0 to 2",
+    "personal_status_sex" = "male : married/widowed",
+    "present_residence" = "1 <= ... < 4 yrs",
+    "property" = "car or other",
+    "purpose" = "business",
+    "savings" = "... >= 1000 DM",
+    "status" = "... >= 200 DM / salary for at least 1 year",
+    "telephone" = "yes (under customer name)"
+  )
+
+james <-
+  data.frame(
+    "age" = 30,
+    "amount" = 6480, # average car price in the 70s
+    "credit_history" = "no credits taken/all credits paid back duly",
+    "duration" = 12,
+    "employment_duration" = "4 <= ... < 7 yrs",
+    "foreign_worker" = "no",
+    "housing" = "rent",
+    "installment_rate" = "< 20",
+    "job" = "skilled employee/official",
+    "number_credits" = "2-3",
+    "other_debtors" = "none",
+    "other_installment_plans" = "bank",
+    "people_liable" = "0 to 2",
+    "personal_status_sex" = "female : non-single or male : single",
+    "present_residence" = "< 1 yr",
+    "property" = "unknown / no property",
+    "purpose" = "car (new)",
+    "savings" = "unknown/no savings account",
+    "status" = "... >= 200 DM / salary for at least 1 year",
+    "telephone" = "no"
+  )
+```
+```{r, include=FALSE}
+model <- readRDS("model.rds")
+```
+```{r}
+model$predict(bob)
+model$predict(james)
+```
 
 To get a general understanding of the model, he formulates the following hypotheses together with the IML methods he intends to use.
 
 |Hypothesis|IML Method|
 |----------|----------|
-|What are the most important features for the prediction of the `credit_risk`|Permutation Featurn Importance|
-|What are the interaction effects between the features |H-Statistics|
-|Having no `property` should imply a bad `credit_risk`|ALE|
-|Is being older better for `credit_risk`|ALE|
-|Is there an interaction between `job` and `credit_history`? People with delayed `credit_history` often have low quality `job`|H-Statistic|
-|What is the smallest change in `number_credits` that can toggle the model output from `good` to `bad`|Counterfactual Explanations|
-|People with high quality `job`s have good `credit_risk`|SHAP Feature Importance & SHAP Summary Plots|
-|How strong is the interaction between each feature and other features in German Credit Dataset?|H-Statistic|
-|Being a foreign worker does not affect your credit risk. If this feature is important for prediction, this implies discrimination|Permutation Feature Importance & ALE|
-|The better the savings, the better your credit risk|Permutation Feature Importance, SHAP Feature Importance & SHAP Summary Plots|
-|How does a change in the `savings` threshold change the `credit_risk`|ALE, Counterfactual Explanations|
-|The higher the `installment_rate` the better the `credit_risk`|Partial Dependence Plot, SHAP Dependence Plot & SHAP Summary Plots|
-|Does owning a house (`housing`) mean good `credit_risk`|Partial Dependence Plot, SHAP Dependence Plot & SHAP Summary Plot|
+|What are the most important features for the prediction of the `credit_risk`.|Permutation Feature Importance|
+|How strong is the interaction between each feature and all other features in the German Credit Dataset?|H-Statistics|
+|Having no `property` should imply a bad `credit_risk`.|ALE|
+|Is being older mean better for `credit_risk`?|ALE|
+|Is there an interaction between `job` and `credit_history`? People with delayed `credit_history` often have low quality `job`.|H-Statistic|
+|People with high quality `job`s have good `credit_risk`.|SHAP Feature Importance & SHAP Summary Plots|
+|Being a foreign worker does not affect your `credit_risk`. If this feature is important for prediction, this implies discrimination.|Permutation Feature Importance & ALE|
+|The better the savings, the better your `credit_risk`.|Permutation Feature Importance, SHAP Feature Importance & SHAP Summary Plots|
+<!-- |The higher the `installment_rate` the better the `credit_risk`|Partial Dependence Plot, SHAP Dependence Plot & SHAP Summary Plots| -->
+<!-- |Does owning a house (`housing`) mean good `credit_risk`|Partial Dependence Plot, SHAP Dependence Plot & SHAP Summary Plot| -->
 
 To investigate the individual cases of him and his friend he asks the following questions, together with the IML methods he thinks can help him answer them.
 
 |Hypothesis|IML Method|
 |----------|----------|
-|What are the feature contributions to James' `credit_risk` prediction |SHAP|
-|What are the feature contributions to Bob's `credit_risk` prediction |SHAP|
-|How can James get a `good` credit risk|Counterfactual Explanations|
-|Why did Bob get a `bad` credit risk and how can he change it|Counterfactual Explanations|
-|Because Bob is married and James isn't, Bob is interested in whether his material status has a positive or negative effect on the model's prediction|LIME|
+|What are the feature contributions to James' `credit_risk` prediction ?|SHAP|
+|What are the feature contributions to Bob's `credit_risk` prediction ?|SHAP|
+|Because Bob is married and James isn't, Bob is interested in whether his marital status has a positive or negative effect on the model's prediction|SHAP|
+|How can James get a `good` credit risk ?|Counterfactual Explanations|
+|Why did Bob get a `bad` credit risk and how can he change it ?|Counterfactual Explanations|
 
-```{r, eval=FALSE}
-library(iml)
-```
+We use the package `iml` to investigate our hypotheses.
 
+### General Hypotheses
 1. What are the most important features for the prediction of the `credit_risk`?\
 The importance of features can be uncovered using Permutation Feature Importance (Figure \@ref(fig:feature-importance)). Through the increase in the prediction error, we can see that the most important feature for predicting `credit_risk` is `status` of your checking account, which stands out from the other features of the dataset. It is followed by `duration`, `purpose`, `amount`, `credit_history`, `installment_rate`, etc. with gradual decrease in the importance.
-```{r, eval=FALSE}
-imp <- FeatureImp$new(model, loss = "ce")
-plot(imp)
-```
-```{r feature-importance, out.width='80%', fig.align='center', fig.cap="German Credit Feature Importance", echo=FALSE}
+
+```{r feature-importance, out.width='55%', fig.align='center', fig.cap="German Credit Feature Importance", echo=FALSE}
 knitr::include_graphics("plots/feature_importance_ce.jpg")
 ```
 
 
-2. Having no `property` should imply a bad `credit_risk`\
-NaN
-
-
-3. Is being older better for `credit_risk`?\
-To answer this question, we use the ALE plot (Figure \@ref(fig:ale-age)). The ALE plot shows a linear relationship between the predicted probability and `age`. The model confirms that the older we get, the better influence we have on the credit score.
-```{r, eval=FALSE}
-eff <- FeatureEffect$new(model, feature = c("age"), method = "ale")
-eff$plot()
-```
-```{r ale-age, out.width='80%', fig.align='center', fig.cap="ALE Plot of `age`", echo=FALSE}
-knitr::include_graphics("plots/ale_age.jpg")
-```
-
-4. Is there an interaction between `job` and `credit_history`? People with delayed `credit_history` often have low quality `job`\
-
-The figure below shows the 2-way interactions between job and the other features. The interaction strength between `job` and `credit_history` is pretty weak. In general all the 2-way interactions are pretty weak.
-
-```{r job-interaction, out.width='60%', fig.align='center', fig.cap="2-way interaction strength between `jobs` and  the other features.", echo=FALSE}
-knitr::include_graphics("plots/h-4.png")
-```
-
-5. What is the smallest change in `number_credits` that can toggle the model output from `good` to `bad`?\
-NaN
-
-6. People with high quality `job`s have good `credit_risk`\
-ALE plot continues to be used to answer this question (Figure \@ref(fig:ale-job)). According to the plot, being unskilled and non-resident or being manager/high qualified employee causes a loss in your credit score while being skilled employees or just being a resident can have a positive effect on your credit score. This raises some questions for us to think about. Why are both unskilled but 
-being resident has good effect on the credit and bad effect otherwise? Is it some kind of discrimination to foreigners? The plot also shows that being a high-qualified employee has the worst effect on the credit, which is an absurd thing. These may be explained due to the fact that the dataset is relatively small so it may possess high variance.
-```{r, eval=FALSE}
-eff <- FeatureEffect$new(model, feature = c("job"), method = "ale")
-eff$plot()
-```
-```{r ale-job, out.width='80%', fig.align='center', fig.cap="ALE Plot of `job`", echo=FALSE}
-knitr::include_graphics("plots/ale_job.jpg")
-```
-
-7. How strong is the interaction between each feature and all other features in German Credit Dataset?\
+2. How strong is the interaction between each feature and all other features in German Credit Dataset?\
 To answer the question, we calculate the H-statistic between each feature and all other features. The result is presented in Figure \@ref(fig:interaction). As can be seen, the interactions are not strong where the highest is just approximately 0.11.
-```{r, eval=FALSE}
-ia <- Interaction$new(model)
-plot(ia)
-```
-```{r interaction, out.width='80%', fig.align='center', fig.cap="Interaction Strength (H-Statistic) between each feature and all other features", echo=FALSE}
+
+```{r interaction, out.width='60%', fig.align='center', fig.cap="Interaction Strength (H-Statistic) between each feature and all other features", echo=FALSE}
 knitr::include_graphics("plots/interaction.jpg")
 ```
 
-8. Being a foreign worker does not affect your credit risk. If this feature is important for prediction, this implies discrimination.\
+3. Having no `property` should imply a bad `credit_risk`\
+NaN
+
+
+4. Is being older better for `credit_risk`?\
+To answer this question, we use the ALE plot (Figure \@ref(fig:ale-age)). The ALE plot shows a linear relationship between the predicted probability and `age`. The model confirms that the older we get, the better influence we have on the credit score.
+
+```{r ale-age, out.width='50%', fig.align='center', fig.cap="ALE Plot of `age'", echo=FALSE}
+knitr::include_graphics("plots/ale_age.jpg")
+```
+
+5. Is there an interaction between `job` and `credit_history`? People with delayed `credit_history` often have low quality `job`\
+Figure \@ref(fig:job-interaction) shows the 2-way interactions between job and the other features. The interaction strength between `job` and `credit_history` is pretty weak. In general all the 2-way interactions are pretty weak.
+
+```{r job-interaction, out.width='60%', fig.align='center', fig.cap="2-way interaction strength between `jobs' and  the other features.", echo=FALSE}
+knitr::include_graphics("plots/h-4.png")
+```
+
+6. People with high quality `job`s have good `credit_risk`\
+ALE plot continues to be used to answer this question (Figure \@ref(fig:ale-job)). According to the plot, being unskilled and non-resident or being manager/high qualified employee causes a loss in your credit score while being skilled employees or just being a resident can have a positive effect on your credit score. This raises some questions for us to think about. Why are both unskilled but
+being resident has good effect on the credit and bad effect otherwise? Is it some kind of discrimination to foreigners? The plot also shows that being a high-qualified employee has the worst effect on the credit, which is an absurd thing. These may be explained due to the fact that the dataset is relatively small so it may possess high variance.
+
+```{r ale-job, out.width='80%', fig.align='center', fig.cap="ALE Plot of `job'", echo=FALSE}
+knitr::include_graphics("plots/ale_job.jpg")
+```
+
+7. Being a foreign worker does not affect your credit risk. If this feature is important for prediction, this implies discrimination.\
 As can be seen from Figure \@ref(fig:feature-importance), `foreign_worker` is the 6th least important feature in 20 features in total. Looking at the ALE plot for `foreign_worker` in Figure \@ref(fig:ale-foreign-worker), we notice a strange phenomenon. If you are a foreign worker, it brings positive effect to your credit, and otherwise, a slight negative effect. However, this can be explained by the distribution of the feature (Figure \@ref(fig:geom-bar-foreign-worker)). The proportion of foreign workers is less than 4% the proportion of native workers (37 to 963) and almost 90% of the foreign workers in the dataset has good credit however only about 70% of the native workers in the dataset has good credit.
 
 ```{r}
 summary(data$foreign_worker)
 ```
 
-```{r, eval=FALSE}
-eff <- FeatureEffect$new(model, feature = c("foreign_worker"))
-eff$plot()
-```
-```{r ale-foreign-worker, out.width='80%', fig.align='center', fig.cap="ALE Plot for `foreign-worker`", echo=FALSE}
+```{r ale-foreign-worker, out.width='50%', fig.align='center', fig.cap="ALE Plot for `foreign-worker'", echo=FALSE}
 knitr::include_graphics("plots/ale_foreign_worker.jpg")
 ```
 
@@ -452,22 +471,61 @@ knitr::include_graphics("plots/ale_foreign_worker.jpg")
 ggplot(data = data, mapping = aes(x = foreign_worker, fill = credit_risk)) +
   geom_bar()
 ```
-```{r geom-bar-foreign-worker, out.width='80%', fig.align='center', fig.cap="Bar Plot for `foreign-worker` with distribution of `credit-risk` in each level", echo=FALSE}
+```{r geom-bar-foreign-worker, out.width='50%', fig.align='center', fig.cap="Bar Plot for `foreign-worker` with distribution of `credit-risk' in each level", echo=FALSE}
 knitr::include_graphics("plots/geom_bar_foreign_worker.jpg")
 ```
 
-9. The better the savings, the better your credit risk\
-We continue to use ALE plot to answer this question. Looking at the plot in Figure \ref(fig:ale-savings), it is clear that the more money for savings, the more positive effect it has on your credit risk. And if there is no savings account, the credit can suffer.
-```{r, eval=FALSE}
-eff <- FeatureEffect$new(model, feature = c("savings"))
-eff$plot()
-```
-```{r ale-savings, out.width='80%', fig.align='center', fig.cap="ALE Plot for `savings`", echo=FALSE}
+8. The better the savings, the better your credit risk\
+We continue to use ALE plot to answer this question. Looking at the plot in Figure \@ref(fig:ale-savings), it is clear that the more money for savings, the more positive effect it has on your credit risk. And if there is no savings account, the credit can suffer.
+
+```{r ale-savings, out.width='80%', fig.align='center', fig.cap="ALE Plot for `savings'", echo=FALSE}
 knitr::include_graphics("plots/ale_savings.jpg")
 ```
 
-10. The higher the `installment_rate` the better the `credit_risk`\
+<!-- 10. The higher the `installment_rate` the better the `credit_risk`\ -->
+<!-- NaN -->
+
+<!-- 11. Does owning a house (`housing`) mean good `credit_risk`\ -->
+<!-- NaN -->
+
+### Bob and James-specific Hypotheses
+
+1. What are the feature contributions to James’
+credit_risk prediction ? \
+Figure \@ref(fig:shapley-james) shows that the most influential feature affecting jame's good prediction is his checking account's `status` compared to the average prediction for the data set.
+
+```{r, include=FALSE}
+shapley <- Shapley$new(model, x.interest = james)
+```
+```{r shapley-james, out.width='80%', fig.align='center', fig.cap="Shapley contributions to Jame's predictions", echo=FALSE}
+plot(shapley)
+```
+2. What are the feature contributions to Bob’
+credit_risk prediction ? \
+Figure \@ref(fig:shapley-bob) shows that the most influential features affecting Bob's bad prediction are his requested credit `amount` and the credit `duration` compared to the average prediction for the data set. Bob is requesting a fairly large amount of `18424 DM` to pay in `5 years`. This value is in fact the maximum amount in the observed dataset.
+
+```{r, include=FALSE}
+shapley <- Shapley$new(model, x.interest = bob)
+```
+```{r}
+max(data$amount)
+```
+```{r shapley-bob, out.width='80%', fig.align='center', fig.cap="Shapley contributions to Bob's predictions", echo=FALSE}
+plot(shapley)
+```
+
+3. Because Bob is married and James isn't, Bob is interested in whether his marital status has a positive or negative effect on the model's prediction. \
+Both Figure \@ref(fig:shapley-james) and Figure \@ref(fig:shapley-bob) show that although the contribution of status is fairly small, the fact that James is single actually has a negative contribution to his `good` `credit_risk`, while the fact that bob is married has a positive contribution to his `bad` `credit_risk`.
+
+```{r, eval=FALSE, include=FALSE}
+# counterfactuals
+devtools::load_all("../counterfactuals", export_all = FALSE)
+# generated by irace in folder appendix_irace
+best_params <- readRDS("../best_configs.rds")
+```
+4. How can James get a `good` credit risk ? \
 NaN
 
-11. Does owning a house (`housing`) mean good `credit_risk`\
+5. Why did Bob get a `bad` credit risk and how can he change it ? \
 NaN
+
