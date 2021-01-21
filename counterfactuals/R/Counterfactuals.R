@@ -492,6 +492,7 @@ Counterfactuals = R6::R6Class("Counterfactuals",
 
       change.id = which(rowSums(self$results$counterfactuals.diff[, features] != 0) == cf$nr.changed)
       instances = cf[change.id, ]
+      message("all good")
 
       if (!is.null(epsilon)) {
         instances = instances[instances$dist.target<=epsilon, ]
