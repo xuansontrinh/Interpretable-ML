@@ -12,9 +12,14 @@ fencoder <- po("encode",
                method = "one-hot",
                affect_columns = selector_type("factor")
 )
-ord_to_int <- po("colapply",
-                 applicator = as.integer,
-                 affect_columns = selector_type("ordered")
+ord_to_num <- po("colapply",
+                 applicator = as.numeric,
+                 affect_columns = selector_type(c("ordered","integer"))
+)
+
+int_to_num <- po("colapply",
+                 applicator = as.numeric,
+                 affect_columns = selector_type("integer")
 )
 
 # PipeOps
@@ -26,7 +31,7 @@ po_over <- po("classbalancing",
               reference = "minor", shuffle = FALSE, ratio = 2.3
 )
 pos <- po("scale") %>>%
-  fencoder %>>% ord_to_int %>>% po_over
+  fencoder %>>% ord_to_num %>>% po_over
 
 inner_cv5 <- rsmp("cv", folds = 5L)
 measure <- msr("classif.bacc")
@@ -64,7 +69,7 @@ rpart_at <- AutoTuner$new(
   tuner = tuner
 )
 
-fct_rpart_pipeline <- po_over %>>% rpart_learner %>>% po("threshold")
+fct_rpart_pipeline <- int_to_num %>>% po_over %>>% rpart_learner %>>% po("threshold")
 fct_rpart_glearner <- GraphLearner$new(fct_rpart_pipeline, id = 'fct_rpart')
 
 fct_rpart_at <- AutoTuner$new(
@@ -98,7 +103,7 @@ ranger_at <- AutoTuner$new(
   tuner = tuner
 )
 
-fct_ranger_pipeline <- po_over %>>% lrn("classif.ranger", predict_type = "prob") %>>% po("threshold")
+fct_ranger_pipeline <- int_to_num %>>% po_over %>>% lrn("classif.ranger", predict_type = "prob") %>>% po("threshold")
 fct_ranger_glearner <- GraphLearner$new(fct_ranger_pipeline, id='fct_ranger')
 
 fct_ranger_at <- AutoTuner$new(

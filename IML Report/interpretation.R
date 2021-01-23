@@ -1,6 +1,7 @@
 library("mlr3viz")
 library("ggplot2")
 library("mlr3verse")
+# library(iml)
 set.seed(20211301)
 
 devtools::load_all("../iml", export_all = FALSE)
@@ -11,10 +12,15 @@ best_params <- readRDS("../best_configs.rds")
 
 
 load("./south-german-credit.Rda")
+data <- lapply(data, function(x) if(is.integer(x)) as.numeric(x) else x)
+data <- lapply(data, function(x) if(is.ordered(x)) factor(x, ordered = FALSE) else x)
+data <- as.data.frame(data)
+x <- data[which(names(data) != "credit_risk")]
+
 
 # counterfactuals
-
-bob <-
+bob <- x[1,]
+temp <-
   data.frame(
     "age" = 30,
     "amount" = 18424,
@@ -37,8 +43,10 @@ bob <-
     "status" = "... >= 200 DM / salary for at least 1 year",
     "telephone" = "yes (under customer name)"
   )
+bob[1,] = temp[,colnames(x)]
 
-james <-
+james <- x[1,]
+temp <-
   data.frame(
     "age" = 30,
     "amount" = 6480, # average car price in the 70s
@@ -61,10 +69,7 @@ james <-
     "status" = "... >= 200 DM / salary for at least 1 year",
     "telephone" = "no"
   )
-exclude <- c("installment_rate", "present_residence", "number_credits")
-bob <- bob[!(names(x) %in% exclude)]
-james <- james[!(names(x) %in% exclude)]
-data <- data[!(names(data) %in% exclude)]
+james[1,] = temp[,colnames(x)]
 
 task <- TaskClassif$new("german-credit",
   backend = data, target = "credit_risk", positive = "good"
@@ -72,12 +77,17 @@ task <- TaskClassif$new("german-credit",
 
 
 fencoder <- po("encode",
-  method = "one-hot",
-  affect_columns = selector_type("factor")
+               method = "one-hot",
+               affect_columns = selector_type("factor")
 )
-ord_to_int <- po("colapply",
-  applicator = as.integer,
-  affect_columns = selector_type("ordered")
+ord_to_num <- po("colapply",
+                 applicator = as.numeric,
+                 affect_columns = selector_type(c("ordered","integer"))
+)
+
+int_to_num <- po("colapply",
+                 applicator = as.numeric,
+                 affect_columns = selector_type("integer")
 )
 
 # PipeOps
@@ -86,7 +96,7 @@ po_over <- po("classbalancing",
   reference = "minor", shuffle = FALSE, ratio = 2.3
 )
 pos <- po("scale") %>>%
-  fencoder %>>% ord_to_int %>>% po_over
+  fencoder %>>% ord_to_num %>>% po_over
 
 inner_cv5 <- rsmp("cv", folds = 5L)
 measure <- msr("classif.bacc")
@@ -120,15 +130,19 @@ radial_svm_at$train(task)
 
 radial_svm_at$model
 
+saveRDS(radial_svm_at, file="tuned_radial.rds")
 
-german <- as.data.frame(task$data())
-x <- german[which(names(german) != "credit_risk")]
+
+
+
+
+
 # x$age = as.integer(x$age)
-model <- Predictor$new(radial_svm_at, data = x, y = german$credit_risk)
-
+model <- Predictor$new(radial_svm_at, data = x, y = data$credit_risk)
+saveRDS(model, file="model.rds")
 # effect = FeatureEffects$new(model)
 # plot(effect, features = c("employment_duration"))
-eff <- FeatureEffect$new(model, feature = c("employment_duration"))
+eff <- FeatureEffect$new(model, feature = c("age"))
 eff$plot()
 
 eff <- FeatureEffect$new(model, feature = c("employment_duration"), method = "pdp")
@@ -144,30 +158,69 @@ eff$plot()
 
 
 # Feature Importance
-imp <- FeatureImp$new(model, loss = "f1")
+imp <- FeatureImp$new(model, loss = "ce")
 
 # H-statistic Interaction
 ia <- Interaction$new(model, feature = "job")
 
-model$predict(victor)
-model$predict(James)
-shapley <- Shapley$new(model, x.interest = Bob)
+model$predict(bob)
+model$predict(james)
+shapley <- Shapley$new(model, x.interest = bob)
 
 cf <- Counterfactuals$new(
   predictor = model,
-  x.interest = x[1, ],
-  target = c(0.5, 1), epsilon = 0,
+  x.interest = bob,
+  lower = 0,
+  epsilon = 0,
+  target = c(0.5, 1),
   generations = list(
     mosmafs::mosmafsTermStagnationHV(10),
     mosmafs::mosmafsTermGenerations(200)
   ),
   mu = best_params$mu,
-  p.mut = best_params$p.mut, p.rec = best_params$p.rec,
+  p.mut = best_params$p.mut, 
+  p.rec = best_params$p.rec,
   p.mut.gen = best_params$p.mut.gen,
   p.mut.use.orig = best_params$p.mut.use.orig,
-  p.rec.gen = best_params$p.rec.gen, initialization = "icecurve",
+  p.rec.gen = best_params$p.rec.gen, 
+  initialization = "icecurve",
   p.rec.use.orig = best_params$p.rec.use.orig,
 )
+
+# retrieve the counterfactuals of Bob
+cf_diff <- cf$results$counterfactuals.diff
+# filter only the counterfactuals with prediction greater than 0.51
+cf_result_diff <- cf_diff[cf_diff$pred.pred >= 0.51,]
+cf_result_diff <- cf_result_diff[order(-cf_result_diff$pred.pred),]
+# filter features that are not meaningful for the counterfactuals interpretation
+cf_result_diff <- cf_result_diff[cf_result_diff$age == 0,]
+cf_result_diff <- cf_result_diff[cf_result_diff$foreign_worker == 0,]
+cf_result_diff <- subset(cf_result_diff, 
+                         select = -c(
+                           dist.target, 
+                           dist.x.interest, 
+                           dist.train, 
+                           pred.NA,
+                           credit_history,
+                           age, 
+                           foreign_worker,
+                           employment_duration,
+                           installment_rate,
+                           personal_status_sex,
+                           other_debtors,
+                           property,
+                           other_installment_plans,
+                           housing,
+                           number_credits,
+                           telephone,
+                           present_residence,
+                           people_liable,
+                           nr.changed,
+                           status
+                         ))
+
+write.table(cf_result_diff, file = "cf_result_diff.csv",
+            sep = "\t", row.names = F)
 
 a <- cf$plot_parallel(features = c("duration", "amount"), plot.x.interest = FALSE)
 a <- a + scale_x_discrete(expand = c(0.1, 0.1), labels = c("duration", "credit amount"))
