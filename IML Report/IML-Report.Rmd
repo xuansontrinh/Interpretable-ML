@@ -370,10 +370,10 @@ We first give a brief description of some interpretable machine learning methods
 
 ## Story Time
 Bob is a 30 year old, senior data scientist in Munich. He has been married for 5 years with no kids. He recently got interested in Interpretable machine learning and works on it in his spare time.
-Bob likes learning by doing, and so he looks very hard for an interesting problem to investigate. Suddenly, he recalls a conversation with his best friend, James, who wanted to purchase a car and got a credit from the bank to do so. James is a Doctor, the same age as bob, but he is single. This makes Bob curious about credit risk predicitions. So he decides to investigate the problem, but for that he needs a data set.
-After a few minutes of googling, he finds the very well known south german credit data set. As he doesn't have the bank's machine learning model, he fits his own model on the data set. His model performs really well on test data, which reassures him that it can be used in place of the bank's model. He also applies the model on him self, as he has been thinking of starting his own company and might need to take a loan from a bank to start off. The model predicts a _bad_ `credit_risk` for him. This motivates him to understand the model even more, perhaps with the aim of playing the system a bit. Now all that's left to do is for him to understand the model using IML methods and then look into his and his friends case.
+Bob likes learning by doing, and so he looks very hard for an interesting problem to investigate. Suddenly, he recalls a conversation with his best friend, James, who wanted to purchase a car and got a credit from the bank to do so. James is a doctor, the same age as Bob, but he is single. This makes Bob curious about credit risk predicitions. So he decides to investigate the problem, but for that he needs a data set.
+After a few minutes of googling, he finds the very well known south german credit data set. As he doesn't have the bank's machine learning model, he fits his own model on the data set. His model performs really well on test data, which reassures him that it can be used in place of the bank's model. He also applies the model on himself, as he has been thinking of starting his own company and might need to take a loan from a bank to start off. The model predicts a _bad_ `credit_risk` for him. This motivates him to understand the model even more, perhaps with the aim of playing the system a bit. Now all that's left to do is for him to understand the model using IML methods and then look into his and his friend's case.
 
-In order to do so, he divides the problem into two. First, he wants to get a general understanding of the model and verify that its predictions make sense. Seconds, he would investigate, much like a detective, his and his friend's case (Bob's and Jame's feature instances are shown below).
+In order to do so, he divides the problem into two. First, he wants to get a general understanding of the model and verifies that its predictions make sense. Second, he would investigate, much like a detective, his and his friend's case (Bob's and Jame's feature instances are shown below).
 ```{r, include=FALSE}
 library("iml")
 ```
@@ -453,7 +453,7 @@ To get a general understanding of the model, he formulates the following hypothe
 
 |Hypothesis|IML Method|
 |----------|----------|
-|What are the most important features for the prediction of the `credit_risk`.|Permutation Feature Importance|
+|What are the most important features for the prediction of the `credit_risk`?|Permutation Feature Importance|
 |How strong is the interaction between each feature and all other features in the German Credit Dataset?|H-Statistics|
 |Is being older mean better for `credit_risk`?|PDP, ICE, ALE|
 |Is there an interaction between `job` and `credit_history`? People with delayed `credit_history` often have low quality `job`.|H-Statistic|
