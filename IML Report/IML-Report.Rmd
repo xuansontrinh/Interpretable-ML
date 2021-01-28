@@ -443,10 +443,15 @@ radial_svm_at <- readRDS("tuned_radial.rds")
 german <- as.data.frame(task$data())
 model <- Predictor$new(radial_svm_at, data = x, y = german$credit_risk)
 ```
+
 ```{r}
-radial_svm_at$tuning_result$threshold.thresholds
 predict(radial_svm_at, bob, predict_type = "response")
 predict(radial_svm_at, james, predict_type = "response")
+```
+__Note:__ After tuning, the radial svm has a probability threshold of 0.5 i.e. being greater or equal to 0.5 is considered as having good credit. This threshold needs be taken into account when interpreting the prediction probability from IML methods.
+```{r}
+# Threshold of tuned radial svm.
+radial_svm_at$tuning_result$threshold.thresholds
 ```
 
 To get a general understanding of the model, he formulates the following hypotheses together with the IML methods he intends to use.
@@ -510,7 +515,7 @@ knitr::include_graphics("plots/ale_age.jpg")
 4. Is there an interaction between `job` and `credit_history`? People with delayed `credit_history` often have low quality `job`\
 Figure \@ref(fig:job-interaction) shows the 2-way interactions between job and the other features. The interaction strength between `job` and `credit_history` is pretty weak. In general all the 2-way interactions betweek `job` and other features are pretty weak.
 
-```{r job-interaction, out.width='60%', fig.align='center', fig.cap="2-way interaction strength between `job` and  the other features.", echo=FALSE}
+```{r job-interaction, out.width='60%', fig.align='center', fig.cap="2-way interaction strength between `job' and  the other features.", echo=FALSE}
 knitr::include_graphics("plots/interaction_job.jpg")
 ```
 
@@ -537,7 +542,7 @@ knitr::include_graphics("plots/ale_foreign_worker.jpg")
 ggplot(data = data, mapping = aes(x = foreign_worker, fill = credit_risk)) +
   geom_bar()
 ```
-```{r geom-bar-foreign-worker, out.width='50%', fig.align='center', fig.cap="Bar Plot for `foreign-worker` with distribution of `credit-risk' in each level", echo=FALSE}
+```{r geom-bar-foreign-worker, out.width='50%', fig.align='center', fig.cap="Bar Plot for `foreign-worker' with distribution of `credit-risk' in each level", echo=FALSE}
 knitr::include_graphics("plots/geom_bar_foreign_worker.jpg")
 ```
 
@@ -668,6 +673,6 @@ cf_surface <- cf$plot_surface(features = c("duration", "amount"))
 cf_surface
 ```
 
-```{r counterfactuals-surface-bob, out.width='80%', fig.align='center', fig.cap="Counterfactuals surface plot of two features `duration` and `amount` of Bob's case", echo=FALSE}
+```{r counterfactuals-surface-bob, out.width='80%', fig.align='center', fig.cap="Counterfactuals surface plot of two features `duration' and `amount' of Bob's case", echo=FALSE}
 knitr::include_graphics("plots/counterfactuals_surface_bob.jpg")
 ```
