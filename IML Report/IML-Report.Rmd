@@ -513,7 +513,7 @@ knitr::include_graphics("plots/ale_age.jpg")
 ```
 
 4. Is there an interaction between `job` and `credit_history`? People with delayed `credit_history` often have low quality `job`\
-Figure \@ref(fig:job-interaction) shows the 2-way interactions between job and the other features. The interaction strength between `job` and `credit_history` is pretty weak. In general all the 2-way interactions betweek `job` and other features are pretty weak.
+Figure \@ref(fig:job-interaction) shows the 2-way interactions between job and the other features. The interaction strength between `job` and `credit_history` is pretty weak. In general all the 2-way interactions between `job` and other features are pretty weak.
 
 ```{r job-interaction, out.width='60%', fig.align='center', fig.cap="2-way interaction strength between `job' and  the other features.", echo=FALSE}
 knitr::include_graphics("plots/interaction_job.jpg")
