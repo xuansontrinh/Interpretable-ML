@@ -2,7 +2,8 @@ library("mlr3viz")
 library("ggplot2")
 library("mlr3verse")
 library("paradox")
-# library(iml)
+
+theme_set(theme_bw())
 set.seed(20211301)
 
 devtools::load_all("../iml", export_all = FALSE)
@@ -13,14 +14,16 @@ best_params <- readRDS("../best_configs.rds")
 
 
 load("./south-german-credit.Rda")
-data <- lapply(data, function(x) if(is.integer(x)) as.numeric(x) else x)
-data <- lapply(data, function(x) if(is.ordered(x)) factor(x, ordered = FALSE) else x)
+data <- lapply(data, function(x) if (is.integer(x)) as.numeric(x) else x)
+data <- lapply(data, function(x) {
+  if (is.ordered(x)) factor(x, ordered = FALSE) else x
+})
 data <- as.data.frame(data)
 x <- data[which(names(data) != "credit_risk")]
 
 
 # counterfactuals
-bob <- x[1,]
+bob <- x[1, ]
 temp <-
   data.frame(
     "age" = 30,
@@ -44,9 +47,9 @@ temp <-
     "status" = "... >= 200 DM / salary for at least 1 year",
     "telephone" = "yes (under customer name)"
   )
-bob[1,] = temp[,colnames(x)]
+bob[1, ] <- temp[, colnames(x)]
 
-james <- x[1,]
+james <- x[1, ]
 temp <-
   data.frame(
     "age" = 30,
@@ -70,7 +73,7 @@ temp <-
     "status" = "... >= 200 DM / salary for at least 1 year",
     "telephone" = "no"
   )
-james[1,] = temp[,colnames(x)]
+james[1, ] <- temp[, colnames(x)]
 
 task <- TaskClassif$new("german-credit",
   backend = data, target = "credit_risk", positive = "good"
@@ -78,17 +81,17 @@ task <- TaskClassif$new("german-credit",
 
 
 fencoder <- po("encode",
-               method = "one-hot",
-               affect_columns = selector_type("factor")
+  method = "one-hot",
+  affect_columns = selector_type("factor")
 )
 ord_to_num <- po("colapply",
-                 applicator = as.numeric,
-                 affect_columns = selector_type(c("ordered","integer"))
+  applicator = as.numeric,
+  affect_columns = selector_type(c("ordered", "integer"))
 )
 
 int_to_num <- po("colapply",
-                 applicator = as.numeric,
-                 affect_columns = selector_type("integer")
+  applicator = as.numeric,
+  affect_columns = selector_type("integer")
 )
 
 # PipeOps
@@ -100,9 +103,9 @@ pos <- po("scale") %>>%
   fencoder %>>% ord_to_num %>>% po_over
 
 inner_cv5 <- rsmp("cv", folds = 5L)
-measure <- msr("classif.bacc")
-tuner <- tnr("grid_search", resolution = 7L)
-terminator <- trm("evals", n_evals = 20)
+measure <- msr("classif.fbeta")
+tuner <- tnr("random_search")
+terminator <- trm("evals", n_evals = 40)
 
 # Radial SVM
 radial_svm_learner <- lrn("classif.svm",
@@ -131,25 +134,24 @@ radial_svm_at$train(task)
 
 radial_svm_at$model
 
-saveRDS(radial_svm_at, file="tuned_radial.rds")
-
-
-
-
-
+saveRDS(radial_svm_at, file = "tuned_radial.rds")
 
 # x$age = as.integer(x$age)
 model <- Predictor$new(radial_svm_at, data = x, y = data$credit_risk)
-saveRDS(model, file="model.rds")
+saveRDS(model, file = "model.rds")
 # effect = FeatureEffects$new(model)
 # plot(effect, features = c("employment_duration"))
 eff <- FeatureEffect$new(model, feature = c("age"))
 eff$plot()
 
-eff <- FeatureEffect$new(model, feature = c("employment_duration"), method = "pdp")
+eff <- FeatureEffect$new(model,
+  feature = c("employment_duration"), method = "pdp"
+)
 eff$plot()
 
-eff <- FeatureEffect$new(model, feature = c("employment_duration"), method = "ice")
+eff <- FeatureEffect$new(model,
+  feature = c("employment_duration"), method = "ice"
+)
 eff$plot()
 
 eff$set.feature("installment_rate")
@@ -157,9 +159,23 @@ eff$plot()
 
 # ggplot(data = data, mapping = aes(x = property, fill = credit_risk)) + geom_bar()
 
-
 # Feature Importance
+f1 <- function(actual, predicted) {
+  tp <- length(actual[actual == "good" & predicted == "good"])
+  fp <- length(actual[actual == "bad" & predicted == "good"])
+  fn <- length(actual[actual == "good" & predicted == "bad"])
+  if (tp == 0) {
+    return(1)
+  } else {
+    precision <- tp / (tp + fp)
+    recall <- tp / (tp + fn)
+    return(1 - (2 * precision * recall / (precision + recall)))
+  }
+}
 imp <- FeatureImp$new(model, loss = "ce")
+imp <- FeatureImp$new(model, loss = f1)
+feature_importance_fbeta<- plot(imp) + scale_x_continuous("Feature importance (loss: F1)")
+# ggsave("feature_importance_fbeta.png", feature_importance_fbeta)
 
 # H-statistic Interaction
 ia <- Interaction$new(model, feature = "job")
@@ -179,11 +195,11 @@ cf <- Counterfactuals$new(
     mosmafs::mosmafsTermGenerations(200)
   ),
   mu = best_params$mu,
-  p.mut = best_params$p.mut, 
+  p.mut = best_params$p.mut,
   p.rec = best_params$p.rec,
   p.mut.gen = best_params$p.mut.gen,
   p.mut.use.orig = best_params$p.mut.use.orig,
-  p.rec.gen = best_params$p.rec.gen, 
+  p.rec.gen = best_params$p.rec.gen,
   initialization = "icecurve",
   p.rec.use.orig = best_params$p.rec.use.orig,
 )
@@ -191,40 +207,49 @@ cf <- Counterfactuals$new(
 # retrieve the counterfactuals of Bob
 cf_diff <- cf$results$counterfactuals.diff
 # filter only the counterfactuals with prediction greater than 0.51
-cf_result_diff <- cf_diff[cf_diff$pred.pred >= 0.51,]
-cf_result_diff <- cf_result_diff[order(-cf_result_diff$pred.pred),]
+cf_result_diff <- cf_diff[cf_diff$pred.pred >= 0.51, ]
+cf_result_diff <- cf_result_diff[order(-cf_result_diff$pred.pred), ]
 # filter features that are not meaningful for the counterfactuals interpretation
-cf_result_diff <- cf_result_diff[cf_result_diff$age == 0,]
-cf_result_diff <- cf_result_diff[cf_result_diff$foreign_worker == 0,]
-cf_result_diff <- subset(cf_result_diff, 
-                         select = -c(
-                           dist.target, 
-                           dist.x.interest, 
-                           dist.train, 
-                           pred.NA,
-                           credit_history,
-                           age, 
-                           foreign_worker,
-                           employment_duration,
-                           installment_rate,
-                           personal_status_sex,
-                           other_debtors,
-                           property,
-                           other_installment_plans,
-                           housing,
-                           number_credits,
-                           telephone,
-                           present_residence,
-                           people_liable,
-                           nr.changed,
-                           status
-                         ))
+cf_result_diff <- cf_result_diff[cf_result_diff$age == 0, ]
+cf_result_diff <- cf_result_diff[cf_result_diff$foreign_worker == 0, ]
+cf_result_diff <- subset(cf_result_diff,
+  select = -c(
+    dist.target,
+    dist.x.interest,
+    dist.train,
+    pred.NA,
+    credit_history,
+    age,
+    foreign_worker,
+    employment_duration,
+    installment_rate,
+    personal_status_sex,
+    other_debtors,
+    property,
+    other_installment_plans,
+    housing,
+    number_credits,
+    telephone,
+    present_residence,
+    people_liable,
+    nr.changed,
+    status
+  )
+)
 
-write.table(cf_result_diff, file = "cf_result_diff.csv",
-            sep = "\t", row.names = F)
+write.table(cf_result_diff,
+  file = "cf_result_diff.csv",
+  sep = "\t", row.names = FALSE
+)
 
-a <- cf$plot_parallel(features = c("duration", "amount"), plot.x.interest = FALSE)
-a <- a + scale_x_discrete(expand = c(0.1, 0.1), labels = c("duration", "credit amount"))
+a <- cf$plot_parallel(
+  features = c("duration", "amount"),
+  plot.x.interest = FALSE
+)
+a <- a + scale_x_discrete(
+  expand = c(0.1, 0.1),
+  labels = c("duration", "credit amount")
+)
 a
 b <- cf$plot_surface(features = c("duration", "amount"))
 b

@@ -4,9 +4,9 @@ author:
   - Xuan-Son Trinh^[Ludwig Maximilian University of Munich, Son.Trinh@campus.lmu.de]
   - Victor Tuekam^[Ludwig Maximilian University of Munich, t.victor@campus.lmu.de]
 output:
-  bookdown::pdf_document2:
+  pdf_document:
     citation_package: default
-    toc: false
+    toc: true
     fig_caption: yes
     latex_engine: xelatex
 ---
@@ -14,46 +14,58 @@ output:
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 ```
+\newpage
 
-# Data set
+# Dataset
 For the Seminar we use the South German Credit dataset, available in the UCI Machine learning repository^[https://archive.ics.uci.edu/ml/datasets/South+German+Credit+%28UPDATE%29].
 
-The data set consists of a 1000 observations together with 21 attributes. The data was collected between 1973 and 1975. The task associated with this data set is the classification of individuals (instances) according to their credit risk ("good", "bad").
+The dataset consists of a 1000 observations together with 21 attributes. The data was collected between 1973 and 1975. The task associated with this data set is the classification of individuals (instances) according to their credit risk ("good", "bad").
 
 
 | Attribute | Description                 |
 | --------- |-----------------------------|
 | status | Status of the debtor's checking account with the bank\
-(factor with 4 levels: _"no checking account"_, _"... < 0 DM"_, _"0<= ... < 200 DM"_, _"... >= 200 DM / salary for at least 1 year"_) |
+(factor with 4 levels: _"no checking account"_, _"... < 0 DM"_,\
+_"0<= ... < 200 DM"_, _"... >= 200 DM / salary for at least 1 year"_) |
 | duration | Credit duration in months (int) |
-| credit_history | History of the compliance with previous or concurrent credit contracts\
-(factor with 5 levels: _"delay in paying off in the past"_, _"critical account/other credits elsewhere"_, _"no credits taken/all credits paid back duly"_, _"existing credits paid back duly till now"_, _"all credits at this bank paid back duly"_) |
+| credit_history | History of the compliance with previous or current credit contracts\
+(factor with 5 levels: _"delay in paying off in the past"_,\
+_"critical account/other credits elsewhere"_, _"no credits taken/all credits paid back duly"_,\
+_"existing credits paid back duly till now"_, _"all credits at this bank paid back duly"_) |
 | purpose| Purpose for which the credit is needed\
-(factor with 11 levels: _"others"_, _"car (new)"_, _"car (used)"_, _"furniture/equipment"_, _"radio/television"_, _"domestic appliances"_, _"repairs"_, _"education"_, _"vacation"_, _"retraining"_, _"business"_) |
+(factor with 11 levels: _"others"_, _"car (new)"_, _"car (used)"_, _"furniture/equipment"_,\
+_"radio/television"_, _"domestic appliances"_, _"repairs"_, _"education"_,\
+_"vacation"_, _"retraining"_, _"business"_) |
 | amount| Amount in DM (int) |
 | savings| Debtor's savings\
-(factor with 5 levels:  _"unknown/no savings account"_, _"... <  100 DM"_, _"100 <= ... <  500 DM"_, _"500 <= ... < 1000 DM"_, _"... >= 1000 DM"_) |
+(factor with 5 levels:  _"unknown/no savings account"_, _"... <  100 DM"_,\
+_"100 <= ... <  500 DM"_, _"500 <= ... < 1000 DM"_, _"... >= 1000 DM"_) |
 | employment_duration| Duration of debtor's employment with current employer\
-(factor with 5 levels: _"unemployed"_, _"< 1 yr"_, _"1 <= ... < 4 yrs"_, _"4 <= ... < 7 yrs"_, _">= 7 yrs"_) |
+(factor with 5 levels: _"unemployed"_, _"< 1 yr"_, _"1 <= ... < 4 yrs"_,\
+_"4 <= ... < 7 yrs"_, _">= 7 yrs"_) |
 | installment_rate| Credit installments as a percentage of debtor's disposable income\
 (ordered factor with 4 levels: _">= 35"_ < _"25 <= ... < 35"_ < _"20 <= ... < 25"_ < _"< 20"_) |
 | personal_status_sex | Combined information on sex and marital status\
-(factor with 4 levels: _"male : divorced/separated"_, _"female : non-single or male : single"_, _"male : married/widowed"_, _"female : single"_) |
+(factor with 4 levels: _"male : divorced/separated"_, _"female : non-single or male : single"_,\
+_"male : married/widowed"_, _"female : single"_) |
 | other_debtors | Is there another debtor or a guarantor for the credit?\
 (factor with 3 levels: _"none"_, _"co-applicant"_, _"guarantor"_) |
 | present_residence| Length of time (in years) the debtor lives in the present residence\
-(ordered factor with 4 levels: _"< 1 yr"_ < _"1 <= ... < 4 yrs"_ < _"4 <= ... < 7 yrs"_ < _">= 7 yrs"_) |
+(ordered factor with 4 levels: _"< 1 yr"_ < _"1 <= ... < 4 yrs"_ \
+< _"4 <= ... < 7 yrs"_ < _">= 7 yrs"_) |
 | property | The debtor's most valuable property\
-(factor with 4 levels: _"unknown / no property"_, _"car or other"_, _"building soc. savings agr./life insurance"_, _"real estate"_) |
+(factor with 4 levels: _"unknown / no property"_, _"car or other"_,\
+_"building soc. savings agr./life insurance"_, _"real estate"_) |
 | age | Age in years (int) |
-| other_installment_plans | Installment plans from providers oder than the credit-giving bank\
+| other_installment_plans | Installment plans from providers other than the credit-giving bank\
 (factor with 3 levels: _"bank"_, _"stores"_, _"none"_) |
 | housing | Type of housing the debtor lives in\
 (factor with 3 levels: _"for free"_, _"rent"_, _"own"_) |
 | number_credits | Number of credits including the current one the debtor has (or had) at this bank\
 (ordered factor with 4 levels: _"1"_ < _"2-3"_ < _"4-5"_ < _">= 6"_) |
 | job | Quality of debtor's job\
-(factor with 4 levels: _"unemployed/unskilled - non-resident"_, _"unskilled - resident"_, _"skilled employee/official"_, _"manager/self-empl./highly qualif. employee"_) |
+(factor with 4 levels: _"unemployed/unskilled - non-resident"_, _"unskilled - resident"_,\
+_"skilled employee/official"_, _"manager/self-empl./highly qualif. employee"_) |
 | people_liable | Number of persons who financially depend on the debtor (i.e., are entitled to maintenance)\
 (factor with 2 levels: _"3 or more"_, _"0 to 2"_) |
 | telephone | Is there a telephone landline registered on the debtor's name?\
@@ -63,12 +75,16 @@ The data set consists of a 1000 observations together with 21 attributes. The da
 | credit_risk | Has the credit contract been complied with (good) or not (bad)?\
 (factor with 2 levels: _"bad"_, _"good"_) |
 
+Table: Dataset
+
 \newpage
-## Load data
+## Dataset Summary
 ```{r, include=FALSE}
 # Load necessary libraries
 library("mlr3verse")
 library("ggplot2")
+
+theme_set(theme_bw())
 
 set.seed(20211301)
 lgr::get_logger("mlr3")$set_threshold("error")
@@ -83,10 +99,10 @@ task <- TaskClassif$new("german-credit",
 )
 ```
 
-```{r, warning=FALSE, results='hold'}
-summary(data)
+```{r warning=FALSE, results='hold', echo=FALSE}
+skimr::skim_without_charts(data)
 ```
-The data set doesn't have any missing values and requires little preprocessing to fit our model. It can also be pointed out that the data has class-imbalance problem: The number of "good" credited people is more than twice the number of "bad" credited people (700 to 300).
+The data set doesn't have any missing values and requires little preprocessing to fit our model. It can also be pointed out that the data has class-imbalance problem: The number of "good" credited people is more than twice the number of "bad" credited people (700 to 300), as seen in the data set summary above.
 
 # Fitting some models
 The `mlr3` package and other packages from the `mlr3` ecosystem are used to do the modeling.
@@ -112,13 +128,13 @@ fencoder <- po("encode",
   affect_columns = selector_type("factor")
 )
 ord_to_num <- po("colapply",
-                 applicator = as.numeric,
-                 affect_columns = selector_type(c("ordered","integer"))
+  applicator = as.numeric,
+  affect_columns = selector_type(c("ordered", "integer"))
 )
 
 int_to_num <- po("colapply",
-                 applicator = as.numeric,
-                 affect_columns = selector_type("integer")
+  applicator = as.numeric,
+  affect_columns = selector_type("integer")
 )
 
 encoder <- fencoder %>>% ord_to_num
@@ -136,9 +152,9 @@ The parameter tuning is done with the following settings for all models. The tun
 ```{r}
 # tuning settings
 inner_cv5 <- rsmp("cv", folds = 5L)
-measure <- msr("classif.bacc")
-tuner <- tnr("grid_search", resolution = 7L)
-terminator <- trm("evals", n_evals = 20)
+measure <- msr("classif.fbeta")
+tuner <- tnr("random_search")
+terminator <- trm("evals", n_evals = 40)
 ```
 
 ```{r, eval=FALSE}
@@ -153,7 +169,7 @@ log_reg_at <- AutoTuner$new(
   measure = measure,
   search_space = ParamSet$new(list(ParamDbl$new(
     "threshold.thresholds",
-    lower = 0, 
+    lower = 0,
     upper = 1
   ))),
   terminator = terminator,
@@ -171,27 +187,28 @@ rpart_at <- AutoTuner$new(
   measure = measure,
   search_space = ParamSet$new(list(ParamDbl$new(
     "threshold.thresholds",
-    lower = 0, 
+    lower = 0,
     upper = 1
   ))),
   terminator = terminator,
   tuner = tuner
 )
 
-fct_rpart_pipeline <- int_to_num %>>% 
-  po_over %>>% 
-  rpart_learner %>>% 
+fct_rpart_pipeline <- int_to_num %>>%
+  po_over %>>%
+  rpart_learner %>>%
   po("threshold")
-fct_rpart_glearner <- GraphLearner$new(fct_rpart_pipeline, id = 'fct_rpart')
+fct_rpart_glearner <- GraphLearner$new(fct_rpart_pipeline, id = "fct_rpart")
 
 fct_rpart_at <- AutoTuner$new(
   learner = fct_rpart_glearner,
   resampling = inner_cv5,
   measure = measure,
   search_space = ParamSet$new(list(ParamDbl$new(
-    "threshold.thresholds", 
-    lower = 0, 
-    upper = 1))),
+    "threshold.thresholds",
+    lower = 0,
+    upper = 1
+  ))),
   terminator = terminator,
   tuner = tuner
 )
@@ -224,11 +241,11 @@ ranger_at <- AutoTuner$new(
   tuner = tuner
 )
 
-fct_ranger_pipeline <- int_to_num %>>% 
-  po_over %>>% 
-  lrn("classif.ranger", predict_type = "prob") %>>% 
+fct_ranger_pipeline <- int_to_num %>>%
+  po_over %>>%
+  lrn("classif.ranger", predict_type = "prob") %>>%
   po("threshold")
-fct_ranger_glearner <- GraphLearner$new(fct_ranger_pipeline, id='fct_ranger')
+fct_ranger_glearner <- GraphLearner$new(fct_ranger_pipeline, id = "fct_ranger")
 
 fct_ranger_at <- AutoTuner$new(
   learner = fct_ranger_glearner,
@@ -237,6 +254,32 @@ fct_ranger_at <- AutoTuner$new(
   search_space = ranger_tune_ps,
   terminator = terminator,
   tuner = tuner
+)
+
+xgboost_learner <- po(lrn("classif.xgboost", predict_type="prob"))
+xgboost_pipeline <- pos %>>% xgboost_learner
+xgboost_glearner <- GraphLearner$new(xgboost_pipeline, id="xg_boost", predict_type = "prob")
+
+xgboost_search_space <- ParamSet$new(list(
+  ParamDbl$new("classif.xgboost.eta", lower = 0.1, upper = 0.3),
+  ParamDbl$new("classif.xgboost.colsample_bytree", lower = 0.5, upper = 0.9),
+  ParamInt$new("classif.xgboost.max_depth", lower = 8, upper = 16),
+  ParamDbl$new("classif.xgboost.subsample", lower = 0.5, upper = 0.8),
+  ParamInt$new("classif.xgboost.nrounds", lower = 110, upper = 118),
+  ParamDbl$new("classif.xgboost.gamma", lower = 0, upper = 4),
+  ParamDbl$new("classif.xgboost.lambda", lower = 1, upper = 4.5),
+  ParamDbl$new("classif.xgboost.alpha", lower = 0, upper = 1)
+)
+)
+
+# Creating the AutoTuner.
+xgboost_at <- AutoTuner$new(
+  learner = xgboost_glearner,
+  resampling = inner_cv5,
+  terminator = terminator,
+  search_space = xgboost_search_space,
+  tuner = tuner,
+  measure = measure
 )
 
 # Svms
@@ -328,12 +371,13 @@ bmr <- benchmark(design)
 autoplot(bmr, measure = msr("classif.fbeta")) +
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
 ```
-```{r evaluation-results, out.width='80%', fig.align='center', fig.cap="Evaluation", echo=FALSE}
-knitr::include_graphics("plots/fbeta.jpeg")
+```{r evaluation-results, out.width='70%', fig.align='center', fig.cap="\\label{fig:evalutation-results}Evaluation", echo=FALSE}
+knitr::include_graphics("plots/fbeta_eval.png")
 ```
 
-As can be seen in Figure \@ref(fig:evaluation-results), the tuned SVM using radial basis kernel has the best performance (highest F1 score) and therefore is used for subsequent interpretations. We also observe that the performance of decision tree does not change much and the performance of random forest changes significantly, when categorical variables are not converted to numerics (See box plots in Figure \@ref(fig:evaluation-results) labeled `fct_`).
+As can be seen in Figure \ref{fig:evaluation-results}, the tuned SVM using radial basis kernel has the best performance (highest F1 score) and therefore is used for subsequent interpretations. We also observe that the performance of decision tree does not change much and the performance of random forest changes significantly, when categorical variables are not converted to numerics (See box plots in Figure \ref{fig:evaluation-results} labeled `fct_`).
 
+\newpage
 # Interpretable Machine Learning Methods and Hypotheses
 We first give a brief description of some interpretable machine learning methods we would use to investigate our hypotheses. The methods are more thoroughly described in the Interpertable Machine Learning book^[https://christophm.github.io/interpretable-ml-book/].
 
@@ -378,14 +422,18 @@ In order to do so, he divides the problem into two. First, he wants to get a gen
 library("iml")
 ```
 ```{r individual-features}
-data <- lapply(data, 
-               function(x) if(is.integer(x)) as.numeric(x) else x)
-data <- lapply(data, 
-               function(x) if(is.ordered(x)) factor(x, ordered = FALSE) else x)
+data <- lapply(
+  data,
+  function(x) if (is.integer(x)) as.numeric(x) else x
+)
+data <- lapply(
+  data,
+  function(x) if (is.ordered(x)) factor(x, ordered = FALSE) else x
+)
 data <- as.data.frame(data)
 x <- data[which(names(data) != "credit_risk")]
 
-bob <- x[1,]
+bob <- x[1, ]
 temp <-
   data.frame(
     "age" = 30,
@@ -409,9 +457,9 @@ temp <-
     "status" = "... >= 200 DM / salary for at least 1 year",
     "telephone" = "yes (under customer name)"
   )
-bob[1,] = temp[,colnames(x)]
+bob[1, ] <- temp[, colnames(x)]
 
-james <- x[1,]
+james <- x[1, ]
 temp <-
   data.frame(
     "age" = 30,
@@ -435,7 +483,7 @@ temp <-
     "status" = "... >= 200 DM / salary for at least 1 year",
     "telephone" = "no"
   )
-james[1,] = temp[,colnames(x)]
+james[1, ] <- temp[, colnames(x)]
 ```
 ```{r}
 radial_svm_at <- readRDS("tuned_radial.rds")
@@ -481,60 +529,60 @@ We use the package `iml` to investigate our hypotheses.
 
 ### General Hypotheses
 1. What are the most important features for the prediction of the `credit_risk`?\
-The importance of features can be uncovered using Permutation Feature Importance (Figure \@ref(fig:feature-importance)). Through the increase in the prediction error, we can see that the most important feature for predicting `credit_risk` is `status` of your checking account, which stands out from the other features of the dataset. It is followed by `duration`, `amount`, `property`, `installment_rate`, etc. with gradual decrease in the importance.
+The importance of features can be uncovered using Permutation Feature Importance (Figure \ref{fig:feature-importance}). Through the increase in the prediction error, we can see that the most important feature for predicting `credit_risk` is `status` of your checking account, which stands out from the other features of the dataset. It is followed by `duration`, `amount`, `property`, `installment_rate`, etc. with gradual decrease in the importance.
 
-```{r feature-importance, out.width='55%', fig.align='center', fig.cap="German Credit Feature Importance", echo=FALSE}
-knitr::include_graphics("plots/feature_importance_ce.jpg")
+```{r out.width='55%', fig.align='center', fig.cap="\\label{fig:feature-importance}German Credit Feature Importance", echo=FALSE}
+knitr::include_graphics("plots/feature_importance_fbeta.png")
 ```
 
 
 2. How strong is the interaction between each feature and all other features in German Credit Dataset?\
-To answer the question, we calculate the H-statistic between each feature and all other features. The result is presented in Figure \@ref(fig:interaction). As can be seen, the interactions are very weak. The interactions only explain less than 5% variance in most of the features. The highest interaction strength is with the feature `status` where approximately 17.5% of variance is explained. 
+To answer the question, we calculate the H-statistic between each feature and all other features. The result is presented in Figure \ref{fig:interaction}. As can be seen, the interactions are very weak. The interactions only explain less than 5% variance in most of the features. The highest interaction strength is with the feature `status` where approximately 17.5% of variance is explained.
 
-```{r interaction, out.width='60%', fig.align='center', fig.cap="Interaction Strength (H-Statistic) between each feature and all other features", echo=FALSE}
+```{r out.width='60%', fig.align='center', fig.cap="\\label{fig:interaction}Interaction Strength (H-Statistic) between each feature and all other features", echo=FALSE}
 knitr::include_graphics("plots/interaction.jpg")
 ```
 
 
 
 3. Is being older better for `credit_risk`?\
-To answer this question, we use the PDP + ICE (centered + uncentered) and ALE plot (Figures \@ref(fig:pdp-ice-age), \@ref(fig:pdp-ice-center-age), \@ref(fig:ale-age)). From the three plots, it can be seen that there is a consistent linear relation between the predicted probability and `age`: The higher the age, the better the `good` credit probability. With the ALE plot, we can also observe more clearly the effect of the individual feature `age` on the average prediction: age before 35 has negative effect on the credit score.
+To answer this question, we use the PDP + ICE (centered + uncentered) and ALE plot (Figures \ref{fig:pdp-ice-age}, \ref{fig:pdp-ice-center-age}, \ref{fig:ale-age}). From the three plots, it can be seen that there is a consistent linear relation between the predicted probability and `age`: The higher the age, the better the `good` credit probability. With the ALE plot, we can also observe more clearly the effect of the individual feature `age` on the average prediction: age before 35 has negative effect on the credit score.
 
-```{r pdp-ice-age, out.width='50%', fig.align='center', fig.cap="Uncentered PDP + ICE Plot of `age'", echo=FALSE}
+```{r pdp-ice-age, out.width='50%', fig.align='center', fig.cap="\\label{pdp-ice-age}Uncentered PDP + ICE Plot of `age'", echo=FALSE}
 knitr::include_graphics("plots/pdp_ice_age.jpg")
 ```
 
-```{r pdp-ice-center-age, out.width='50%', fig.align='center', fig.cap="Centered PDP + ICE Plot of `age'", echo=FALSE}
+```{r pdp-ice-center-age, out.width='50%', fig.align='center', fig.cap="\\label{pdp-ice-center-age}Centered PDP + ICE Plot of `age'", echo=FALSE}
 knitr::include_graphics("plots/pdp_ice_centered_age.jpg")
 ```
 
-```{r ale-age, out.width='50%', fig.align='center', fig.cap="ALE Plot of `age'", echo=FALSE}
+```{r ale-age, out.width='50%', fig.align='center', fig.cap="\\label{ale-age}ALE Plot of `age'", echo=FALSE}
 knitr::include_graphics("plots/ale_age.jpg")
 ```
 
 4. Is there an interaction between `job` and `credit_history`? People with delayed `credit_history` often have low quality `job`\
-Figure \@ref(fig:job-interaction) shows the 2-way interactions between job and the other features. The interaction strength between `job` and `credit_history` is pretty weak. In general all the 2-way interactions between `job` and other features are pretty weak.
+Figure \ref{fig:job-interaction} shows the 2-way interactions between job and the other features. The interaction strength between `job` and `credit_history` is pretty weak. In general all the 2-way interactions between `job` and other features are pretty weak.
 
-```{r job-interaction, out.width='60%', fig.align='center', fig.cap="2-way interaction strength between `job' and  the other features.", echo=FALSE}
+```{r job-interaction, out.width='60%', fig.align='center', fig.cap="\\label{job-interaction}2-way interaction strength between `job' and  the other features.", echo=FALSE}
 knitr::include_graphics("plots/interaction_job.jpg")
 ```
 
 5. People with high quality `job`s have good `credit_risk`\
-ALE plot continues to be used to answer this question (Figure \@ref(fig:ale-job)). According to the plot, being unskilled and non-resident or being manager/high qualified employee causes a loss in your credit score while being skilled employees or just being a resident can have a positive effect on your credit score. This raises some questions for us to think about. Why are both unskilled but
+ALE plot continues to be used to answer this question (Figure \ref{fig:ale-job}). According to the plot, being unskilled and non-resident or being manager/high qualified employee causes a loss in your credit score while being skilled employees or just being a resident can have a positive effect on your credit score. This raises some questions for us to think about. Why are both unskilled but
 being resident has good effect on the credit and bad effect otherwise? Is it some kind of discrimination to foreigners? The plot also shows that being a high-qualified employee has the worst effect on the credit, which is an absurd thing. These may be explained due to the fact that the dataset is relatively small so it may possess high variance.
 
-```{r ale-job, out.width='80%', fig.align='center', fig.cap="ALE Plot of `job'", echo=FALSE}
+```{r out.width='80%', fig.align='center', fig.cap="\\label{fig:ale-job}ALE Plot of `job'", echo=FALSE}
 knitr::include_graphics("plots/ale_job.jpg")
 ```
 
 6. Being a foreign worker does not affect your credit risk. If this feature is important for prediction, this implies discrimination.\
-As can be seen from Figure \@ref(fig:feature-importance), `foreign_worker` is the 6th least important feature in 20 features in total. Looking at the ALE plot for `foreign_worker` in Figure \@ref(fig:ale-foreign-worker), we notice a strange phenomenon. If you are a foreign worker, it brings positive effect to your credit, and otherwise, a slight negative effect. However, this can be explained by the distribution of the feature (Figure \@ref(fig:geom-bar-foreign-worker)). The proportion of foreign workers is less than 4% the proportion of native workers (37 to 963) and almost 90% of the foreign workers in the dataset has good credit however only about 70% of the native workers in the dataset has good credit.
+As can be seen from Figure \ref{fig:feature-importance}, `foreign_worker` is the 6th least important feature in 20 features in total. Looking at the ALE plot for `foreign_worker` in Figure \ref{fig:ale-foreign-worker}, we notice a strange phenomenon. If you are a foreign worker, it brings positive effect to your credit, and otherwise, a slight negative effect. However, this can be explained by the distribution of the feature (Figure \ref{fig:geom-bar-foreign-worker}). The proportion of foreign workers is less than 4% the proportion of native workers (37 to 963) and almost 90% of the foreign workers in the dataset has good credit however only about 70% of the native workers in the dataset has good credit.
 
 ```{r}
 summary(data$foreign_worker)
 ```
 
-```{r ale-foreign-worker, out.width='50%', fig.align='center', fig.cap="ALE Plot for `foreign-worker'", echo=FALSE}
+```{r ale-foreign-worker, out.width='50%', fig.align='center', fig.cap="\\label{ale-foreign-worker}ALE Plot for `foreign-worker'", echo=FALSE}
 knitr::include_graphics("plots/ale_foreign_worker.jpg")
 ```
 
@@ -542,14 +590,14 @@ knitr::include_graphics("plots/ale_foreign_worker.jpg")
 ggplot(data = data, mapping = aes(x = foreign_worker, fill = credit_risk)) +
   geom_bar()
 ```
-```{r geom-bar-foreign-worker, out.width='50%', fig.align='center', fig.cap="Bar Plot for `foreign-worker' with distribution of `credit-risk' in each level", echo=FALSE}
+```{r geom-bar-foreign-worker, out.width='50%', fig.align='center', fig.cap="\\label{geom-bar-foreign-worker}Bar Plot for `foreign-worker' with distribution of `credit-risk' in each level", echo=FALSE}
 knitr::include_graphics("plots/geom_bar_foreign_worker.jpg")
 ```
 
 7. The better the savings, the better your credit risk\
-We continue to use ALE plot to answer this question. Looking at the plot in Figure \@ref(fig:ale-savings), it is clear that the more money for savings, the more positive effect it has on your credit risk. And if there is no savings account, the credit can suffer.
+We continue to use ALE plot to answer this question. Looking at the plot in Figure \ref{fig:ale-savings}, it is clear that the more money for savings, the more positive effect it has on your credit risk. And if there is no savings account, the credit can suffer.
 
-```{r ale-savings, out.width='80%', fig.align='center', fig.cap="ALE Plot for `savings'", echo=FALSE}
+```{r ale-savings, out.width='80%', fig.align='center', fig.cap="\\label{ale-savings}ALE Plot for `savings'", echo=FALSE}
 knitr::include_graphics("plots/ale_savings.jpg")
 ```
 
@@ -563,17 +611,17 @@ knitr::include_graphics("plots/ale_savings.jpg")
 
 1. What are the feature contributions to James’
 credit_risk prediction ? \
-Figure \@ref(fig:shapley-james) shows that the most influential feature affecting james's good prediction is his checking account's `status` compared to the average prediction for the data set.
+Figure \ref{fig:shapley-james} shows that the most influential feature affecting james's good prediction is his checking account's `status` compared to the average prediction for the data set.
 
 ```{r, eval=FALSE}
 shapley <- Shapley$new(model, x.interest = james)
 ```
-```{r shapley-james, out.width='80%', fig.align='center', fig.cap="Shapley contributions to James's predictions", echo=FALSE}
+```{r shapley-james, out.width='80%', fig.align='center', fig.cap="\\label{shapley-james}Shapley contributions to James's predictions", echo=FALSE}
 knitr::include_graphics("plots/shapley_james.jpg")
 ```
 2. What are the feature contributions to Bob’
 credit_risk prediction ? \
-Figure \@ref(fig:shapley-bob) shows that the most influential features affecting Bob's bad prediction are his requested credit `amount` and the credit `duration` compared to the average prediction for the data set. Bob is requesting a fairly large amount of `18424 DM` to pay in `5 years`. This value is in fact the maximum amount in the observed dataset.
+Figure \ref{fig:shapley-bob} shows that the most influential features affecting Bob's bad prediction are his requested credit `amount` and the credit `duration` compared to the average prediction for the data set. Bob is requesting a fairly large amount of `18424 DM` to pay in `5 years`. This value is in fact the maximum amount in the observed dataset.
 
 ```{r, eval=FALSE}
 shapley <- Shapley$new(model, x.interest = bob)
@@ -581,12 +629,12 @@ shapley <- Shapley$new(model, x.interest = bob)
 ```{r}
 max(data$amount)
 ```
-```{r shapley-bob, out.width='80%', fig.align='center', fig.cap="Shapley contributions to Bob's predictions", echo=FALSE}
+```{r shapley-bob, out.width='80%', fig.align='center', fig.cap="\\label{shapley-bob}Shapley contributions to Bob's predictions", echo=FALSE}
 knitr::include_graphics("plots/shapley_bob.jpg")
 ```
 
 3. Because Bob is married and James isn't, Bob is interested in whether his marital status has a positive or negative effect on the model's prediction. \
-Both Figure \@ref(fig:shapley-james) and Figure \@ref(fig:shapley-bob) show that although the contribution of status is fairly small, the fact that James is single actually has a negative contribution to his `good` `credit_risk`, while the fact that bob is married has a positive contribution to his `bad` `credit_risk`.
+Both Figure \ref{fig:shapley-james} and Figure \ref{fig:shapley-bob} show that although the contribution of status is fairly small, the fact that James is single actually has a negative contribution to his `good` `credit_risk`, while the fact that bob is married has a positive contribution to his `bad` `credit_risk`.
 
 ```{r, eval=FALSE, include=FALSE}
 # counterfactuals
@@ -596,7 +644,7 @@ best_params <- readRDS("../best_configs.rds")
 ```
 
 5. What can Bob do to improve his credit, i.e. to be considered `good` ? \
-To help Bob, we use the counterfactual explanations to see if there is any combination of changes that can be proposed to mitigate Bob's `credit_risk`. The counterfactuals are presented in Table \@ref(tab:counterfactual-diff-results). In this table, we drop features such as `age` and `foreign_worker` status as it is not realistic to change that. Also, a lot of other features are removed as they are unchanged in the counterfactuals. We also only consider the counterfactuals that have probability greater than 0.5. As a result, the features that need to be changed the most to help improve Bob's credit is `duration` and `amount`. To be specific, Bob needs to reduce the credit amount he loans or reduce the credit duration. A detailed look into the effect of these two features on Bob's credit probability are given in Figure \@ref(fig:counterfactuals-surface-bob), which confirms the analysis.
+To help Bob, we use the counterfactual explanations to see if there is any combination of changes that can be proposed to mitigate Bob's `credit_risk`. The counterfactuals are presented in Table \ref{tab:counterfactual-diff-results}. In this table, we drop features such as `age` and `foreign_worker` status as it is not realistic to change that. Also, a lot of other features are removed as they are unchanged in the counterfactuals. We also only consider the counterfactuals that have probability greater than 0.5. As a result, the features that need to be changed the most to help improve Bob's credit is `duration` and `amount`. To be specific, Bob needs to reduce the credit amount he loans or reduce the credit duration. A detailed look into the effect of these two features on Bob's credit probability are given in Figure \ref{fig:counterfactuals-surface-bob}, which confirms the analysis.
 
 ```{r, eval=FALSE}
 cf <- Counterfactuals$new(
@@ -610,11 +658,11 @@ cf <- Counterfactuals$new(
     mosmafs::mosmafsTermGenerations(200)
   ),
   mu = best_params$mu,
-  p.mut = best_params$p.mut, 
+  p.mut = best_params$p.mut,
   p.rec = best_params$p.rec,
   p.mut.gen = best_params$p.mut.gen,
   p.mut.use.orig = best_params$p.mut.use.orig,
-  p.rec.gen = best_params$p.rec.gen, 
+  p.rec.gen = best_params$p.rec.gen,
   initialization = "icecurve",
   p.rec.use.orig = best_params$p.rec.use.orig,
 )
@@ -622,49 +670,52 @@ cf <- Counterfactuals$new(
 # retrieve the counterfactuals of Bob
 cf_diff <- cf$results$counterfactuals.diff
 # filter only the counterfactuals with prediction greater than 0.51
-cf_result_diff <- cf_diff[cf_diff$pred.pred >= 0.51,]
-cf_result_diff <- cf_result_diff[order(-cf_result_diff$pred.pred),]
+cf_result_diff <- cf_diff[cf_diff$pred.pred >= 0.51, ]
+cf_result_diff <- cf_result_diff[order(-cf_result_diff$pred.pred), ]
 # filter features that are not meaningful for the counterfactuals interpretation
-cf_result_diff <- cf_result_diff[cf_result_diff$age == 0,]
-cf_result_diff <- cf_result_diff[cf_result_diff$foreign_worker == 0,]
-cf_result_diff <- subset(cf_result_diff, 
-                         select = -c(
-                           dist.target, 
-                           dist.x.interest, 
-                           dist.train, 
-                           pred.NA,
-                           credit_history,
-                           age, 
-                           foreign_worker,
-                           employment_duration,
-                           installment_rate,
-                           personal_status_sex,
-                           other_debtors,
-                           property,
-                           other_installment_plans,
-                           housing,
-                           number_credits,
-                           telephone,
-                           present_residence,
-                           people_liable,
-                           nr.changed,
-                           status
-                         ))
+cf_result_diff <- cf_result_diff[cf_result_diff$age == 0, ]
+cf_result_diff <- cf_result_diff[cf_result_diff$foreign_worker == 0, ]
+cf_result_diff <- subset(cf_result_diff,
+  select = -c(
+    dist.target,
+    dist.x.interest,
+    dist.train,
+    pred.NA,
+    credit_history,
+    age,
+    foreign_worker,
+    employment_duration,
+    installment_rate,
+    personal_status_sex,
+    other_debtors,
+    property,
+    other_installment_plans,
+    housing,
+    number_credits,
+    telephone,
+    present_residence,
+    people_liable,
+    nr.changed,
+    status
+  )
+)
 ```
 
 ```{r counterfactual-diff-results, echo=FALSE, warning=FALSE, results="asis"}
 library(kableExtra)
 cf_result_diff <- read.csv("cf_result_diff.csv",
-                   sep = "\t", header = T,
-                   row.names = NULL)
-for (col in c(2,4,5)) {
-  cf_result_diff[,col] <- gsub('/', '/ ', cf_result_diff[,col])
+  sep = "\t", header = T,
+  row.names = NULL
+)
+for (col in c(2, 4, 5)) {
+  cf_result_diff[, col] <- gsub("/", "/ ", cf_result_diff[, col])
 }
-  
-knitr::kable(cf_result_diff, 
-             "latex", 
-             digits = 2, 
-             caption = "Counterfactuals from Bob's case") %>% 
+
+knitr::kable(cf_result_diff,
+  "latex",
+  digits = 2,
+  caption = "Counterfactuals from Bob's case"
+) %>%
   column_spec(1:6, width = "7em")
 ```
 
@@ -673,6 +724,6 @@ cf_surface <- cf$plot_surface(features = c("duration", "amount"))
 cf_surface
 ```
 
-```{r counterfactuals-surface-bob, out.width='80%', fig.align='center', fig.cap="Counterfactuals surface plot of two features `duration' and `amount' of Bob's case", echo=FALSE}
+```{r counterfactuals-surface-bob, out.width='80%', fig.align='center', fig.cap="\\label{counterfactuals-surface-bob}Counterfactuals surface plot of two features `duration' and `amount' of Bob's case", echo=FALSE}
 knitr::include_graphics("plots/counterfactuals_surface_bob.jpg")
 ```

@@ -133,16 +133,6 @@ xgboost_at <- AutoTuner$new(
   measure = measure
 )
 
-
-
-
-
-
-
-
-
-
-
 linear_svm_learner <- po(lrn("classif.svm",
                              type = "C-classification", kernel = "linear", predict_type="prob"
 ))
@@ -203,9 +193,6 @@ radial_svm_at <- AutoTuner$new(
   tuner = tuner,
   measure = measure
 )
-
-
-
 
 
 outer_cv3 <- rsmp("cv", folds = 3L)

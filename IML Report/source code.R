@@ -4,43 +4,36 @@ library("mlr3verse")
 set.seed(20211301)
 
 
-
 load("south-german-credit.Rda")
-task <- TaskClassif$new("german-credit", backend = data, target = "credit_risk", positive = "good")
+task <- TaskClassif$new("german-credit",
+  backend = data, target = "credit_risk", positive = "good"
+)
 
 fencoder <- po("encode",
-               method = "one-hot",
-               affect_columns = selector_type("factor")
+  method = "one-hot",
+  affect_columns = selector_type("factor")
 )
 ord_to_num <- po("colapply",
-                 applicator = as.numeric,
-                 affect_columns = selector_type(c("ordered","integer"))
+  applicator = as.numeric,
+  affect_columns = selector_type(c("ordered", "integer"))
 )
 
 int_to_num <- po("colapply",
-                 applicator = as.numeric,
-                 affect_columns = selector_type("integer")
+  applicator = as.numeric,
+  affect_columns = selector_type("integer")
 )
 
-# PipeOps
-# filter_op <- po("filter", flt("mim"),
-#   filter.nfeat = 3
-# ) # feature filtering on mutual information maximization
 po_over <- po("classbalancing",
-              id = "oversample", adjust = "minor",
-              reference = "minor", shuffle = FALSE, ratio = 2.3
+  id = "oversample", adjust = "minor",
+  reference = "minor", shuffle = FALSE, ratio = 2.3
 )
 pos <- po("scale") %>>%
   fencoder %>>% ord_to_num %>>% po_over
 
 inner_cv5 <- rsmp("cv", folds = 5L)
 measure <- msr("classif.bacc")
-# measure <- msr("classif.fbeta")
 tuner <- tnr("grid_search", resolution = 7L)
-# tuner <- tnr("random_search")
 terminator <- trm("evals", n_evals = 20)
-
-
 
 log_reg_learner <- lrn("classif.log_reg", predict_type = "prob")
 log_reg_pipeline <- pos %>>% log_reg_learner %>>% po("threshold")
@@ -50,11 +43,12 @@ log_reg_at <- AutoTuner$new(
   learner = log_reg_glearner,
   resampling = inner_cv5,
   measure = measure,
-  search_space = ParamSet$new(list(ParamDbl$new("threshold.thresholds", lower = 0, upper = 1))),
+  search_space = ParamSet$new(list(ParamDbl$new("threshold.thresholds",
+    lower = 0, upper = 1
+  ))),
   terminator = terminator,
   tuner = tuner
 )
-
 
 rpart_learner <- lrn("classif.rpart", predict_type = "prob")
 rpart_pipeline <- pos %>>% rpart_learner %>>% po("threshold")
@@ -64,34 +58,44 @@ rpart_at <- AutoTuner$new(
   learner = rpart_glearner,
   resampling = inner_cv5,
   measure = measure,
-  search_space = ParamSet$new(list(ParamDbl$new("threshold.thresholds", lower = 0, upper = 1))),
+  search_space = ParamSet$new(list(ParamDbl$new("threshold.thresholds",
+    lower = 0, upper = 1
+  ))),
   terminator = terminator,
   tuner = tuner
 )
 
-fct_rpart_pipeline <- po("scale") %>>% int_to_num %>>% po_over %>>% rpart_learner %>>% po("threshold")
-fct_rpart_glearner <- GraphLearner$new(fct_rpart_pipeline, id = 'fct_rpart')
+fct_rpart_pipeline <- po("scale") %>>%
+  int_to_num %>>% po_over %>>% rpart_learner %>>% po("threshold")
+fct_rpart_glearner <- GraphLearner$new(fct_rpart_pipeline, id = "fct_rpart")
 
 fct_rpart_at <- AutoTuner$new(
   learner = fct_rpart_glearner,
   resampling = inner_cv5,
   measure = measure,
-  search_space = ParamSet$new(list(ParamDbl$new("threshold.thresholds", lower = 0, upper = 1))),
+  search_space = ParamSet$new(list(ParamDbl$new("threshold.thresholds",
+    lower = 0, upper = 1
+  ))),
   terminator = terminator,
   tuner = tuner
 )
 
-
-
-
-ranger_pipeline <- pos %>>% lrn("classif.ranger", predict_type = "prob") %>>% po("threshold")
-ranger_glearner <- GraphLearner$new(ranger_pipeline, id='ranger')
+ranger_pipeline <- pos %>>% lrn("classif.ranger",
+  predict_type = "prob"
+) %>>% po("threshold")
+ranger_glearner <- GraphLearner$new(ranger_pipeline, id = "ranger")
 
 ranger_tune_ps <- ParamSet$new(list(
   ParamDbl$new("threshold.thresholds", lower = 0, upper = 1),
-  ParamInt$new("classif.ranger.num.trees", lower = 100, upper = 140), # number of trees
-  ParamInt$new("classif.ranger.mtry", lower = 1, upper = ceiling(task$ncol / 2)), # number of variables to possibly split at in each node
-  ParamInt$new("classif.ranger.max.depth", lower = 2, upper = 20) # maximum depth of the tree
+  ParamInt$new("classif.ranger.num.trees",
+    lower = 100, upper = 140
+  ), # number of trees
+  ParamInt$new("classif.ranger.mtry",
+    lower = 1, upper = ceiling(task$ncol / 2)
+  ), # number of variables to possibly split at in each node
+  ParamInt$new("classif.ranger.max.depth",
+    lower = 2, upper = 20
+  ) # maximum depth of the tree
 ))
 
 ranger_at <- AutoTuner$new(
@@ -103,8 +107,11 @@ ranger_at <- AutoTuner$new(
   tuner = tuner
 )
 
-fct_ranger_pipeline <- po("scale") %>>% int_to_num %>>% po_over %>>% lrn("classif.ranger", predict_type = "prob") %>>% po("threshold")
-fct_ranger_glearner <- GraphLearner$new(fct_ranger_pipeline, id='fct_ranger')
+fct_ranger_pipeline <- po("scale") %>>%
+  int_to_num %>>% po_over %>>% lrn("classif.ranger",
+    predict_type = "prob"
+  ) %>>% po("threshold")
+fct_ranger_glearner <- GraphLearner$new(fct_ranger_pipeline, id = "fct_ranger")
 
 fct_ranger_at <- AutoTuner$new(
   learner = fct_ranger_glearner,
@@ -115,15 +122,11 @@ fct_ranger_at <- AutoTuner$new(
   tuner = tuner
 )
 
-
-
-
-
-
-
-xgboost_learner <- lrn("classif.xgboost", nrounds = 100, predict_type = "prob") %>>% po("threshold")
+xgboost_learner <- lrn("classif.xgboost",
+  nrounds = 100, predict_type = "prob"
+) %>>% po("threshold")
 xgboost_pipeline <- pos %>>% xgboost_learner
-xgboost_glearner <- GraphLearner$new(xgboost_pipeline, id="xg_boost")
+xgboost_glearner <- GraphLearner$new(xgboost_pipeline, id = "xg_boost")
 
 xgboost_search_space <- ParamSet$new(list(
   ParamDbl$new("threshold.thresholds", lower = 0, upper = 1),
@@ -135,8 +138,7 @@ xgboost_search_space <- ParamSet$new(list(
   ParamDbl$new("classif.xgboost.gamma", lower = 0, upper = 4),
   ParamDbl$new("classif.xgboost.lambda", lower = 1, upper = 4.5),
   ParamDbl$new("classif.xgboost.alpha", lower = 0, upper = 1)
-)
-)
+))
 
 # Creating the AutoTuner.
 xgboost_at <- AutoTuner$new(
@@ -148,24 +150,14 @@ xgboost_at <- AutoTuner$new(
   measure = measure
 )
 
-
-
-
-
-
-
-
-
-
-
 linear_svm_learner <- lrn("classif.svm",
-                          type = "C-classification", kernel = "linear", predict_type = "prob"
+  type = "C-classification", kernel = "linear", predict_type = "prob"
 )
 poly_svm_learner <- lrn("classif.svm",
-                        type = "C-classification", kernel = "polynomial", predict_type = "prob"
+  type = "C-classification", kernel = "polynomial", predict_type = "prob"
 )
 radial_svm_learner <- lrn("classif.svm",
-                          type = "C-classification", kernel = "radial", predict_type = "prob"
+  type = "C-classification", kernel = "radial", predict_type = "prob"
 )
 
 # Pipelines
@@ -183,13 +175,13 @@ poly_svm_search_space <- ParamSet$new(list(
   ParamDbl$new("threshold.thresholds", lower = 0, upper = 1),
   ParamDbl$new("classif.svm.cost", lower = 0.01, upper = 100),
   ParamDbl$new("classif.svm.gamma", lower = 0.0001, upper = 1),
-  ParamInt$new("classif.svm.degree", lower = 1, upper = 4)  
+  ParamInt$new("classif.svm.degree", lower = 1, upper = 4)
 ))
 
 radial_svm_search_space <- ParamSet$new(list(
   ParamDbl$new("threshold.thresholds", lower = 0, upper = 1),
   ParamDbl$new("classif.svm.cost", lower = 0.01, upper = 100),
-  ParamDbl$new("classif.svm.gamma", lower = 0.0001, upper = 1) 
+  ParamDbl$new("classif.svm.gamma", lower = 0.0001, upper = 1)
 ))
 
 linear_svm_search_space <- ParamSet$new(list(
@@ -222,10 +214,6 @@ radial_svm_at <- AutoTuner$new(
   measure = measure
 )
 
-
-
-
-
 outer_cv3 <- rsmp("cv", folds = 3L)
 design <- benchmark_grid(
   task = task,
@@ -250,7 +238,11 @@ autoplot(bmr) + theme(axis.text.x = element_text(angle = 45, hjust = 1))
 autoplot(bmr, measure = measure) +
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
 
-autoplot(bmr, measure = msr("classif.fbeta")) + theme(axis.text.x = element_text(angle = 45, hjust = 1))
-autoplot(bmr, measure = msr("classif.bacc")) + theme(axis.text.x = element_text(angle = 45, hjust = 1))
-autoplot(bmr, measure = msr("classif.precision")) + theme(axis.text.x = element_text(angle = 45, hjust = 1))
-autoplot(bmr, measure = msr("classif.recall")) + theme(axis.text.x = element_text(angle = 45, hjust = 1))
+autoplot(bmr, measure = msr("classif.fbeta")) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+autoplot(bmr, measure = msr("classif.bacc")) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+autoplot(bmr, measure = msr("classif.precision")) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+autoplot(bmr, measure = msr("classif.recall")) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
