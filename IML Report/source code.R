@@ -31,9 +31,9 @@ pos <- po("scale") %>>%
   fencoder %>>% ord_to_num %>>% po_over
 
 inner_cv5 <- rsmp("cv", folds = 5L)
-measure <- msr("classif.bacc")
-tuner <- tnr("grid_search", resolution = 7L)
-terminator <- trm("evals", n_evals = 20)
+measure <- msr("classif.fbeta")
+tuner <- tnr("random_search")
+terminator <- trm("evals", n_evals = 40)
 
 log_reg_learner <- lrn("classif.log_reg", predict_type = "prob")
 log_reg_pipeline <- pos %>>% log_reg_learner %>>% po("threshold")
