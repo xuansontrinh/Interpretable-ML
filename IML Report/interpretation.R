@@ -233,7 +233,8 @@ cf_result_diff <- subset(cf_result_diff,
     present_residence,
     people_liable,
     nr.changed,
-    status
+    status,
+    job
   )
 )
 
@@ -255,3 +256,8 @@ b <- cf$plot_surface(features = c("duration", "amount"))
 b
 c <- cf$plot_hv()
 c
+
+cf_result_diff <- read.csv("cf_result_diff.csv",
+                           sep = "\t", header = T,
+                           row.names = NULL
+)
