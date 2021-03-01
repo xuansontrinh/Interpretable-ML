@@ -739,3 +739,6 @@ cf_surface
 ```{r counterfactuals-surface-bob, out.width='80%', fig.align='center', fig.cap="\\label{counterfactuals-surface-bob}Counterfactuals surface plot of two features `duration' and `amount' of Bob's case", echo=FALSE}
 knitr::include_graphics("plots/counterfactuals_surface_bob.jpg")
 ```
+
+# Conclusion
+Through multiple IML methods, we have presented the interpretation possibility of blackbox models, here in our case it is the radial basis SVM. With our specific dataset South German Credit, the model gives some valuable insights (from the model's point of view), e.g. the most important feature is the `status` of your checking account; the higher the age, the better your credit score; reducing the amount of money you loan and the duration for that loan can improve your credit score.   
