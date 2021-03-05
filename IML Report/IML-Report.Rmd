@@ -10,6 +10,8 @@ output:
     fig_caption: yes
     latex_engine: xelatex
     number_sections: true
+bibliography: references.bib
+csl: acm-sig-proceedings.csl
 ---
 
 ```{r setup, include=FALSE}
@@ -18,7 +20,7 @@ knitr::opts_chunk$set(echo = TRUE)
 \newpage
 
 # Dataset
-For the Seminar we use the South German Credit dataset, available in the UCI Machine learning repository^[https://archive.ics.uci.edu/ml/datasets/South+German+Credit+%28UPDATE%29].
+For the Seminar we use the South German Credit dataset, available in the UCI Machine learning repository @south-german-credit-ds.
 
 The dataset consists of a 1000 observations together with 21 attributes. The data was collected between 1973 and 1975. The task associated with this data set is the classification of individuals (instances) according to their credit risk ("good", "bad").
 
@@ -106,7 +108,7 @@ skimr::skim_without_charts(data)
 ```
 The data set doesn't have any missing values and requires little preprocessing to fit our model. It can also be pointed out that the data has class-imbalance problem: The number of "good" credited people is more than twice the number of "bad" credited people (700 to 300), as seen in the data set summary above.
 
-# Fitting some models
+# Model Selection
 The `mlr3` package and other packages from the `mlr3` ecosystem are used to do the modeling.
 The fitted and tuned models are:
 
@@ -369,6 +371,8 @@ design <- benchmark_grid(
 bmr <- benchmark(design)
 ```
 
+## Result
+
 ```{r, eval=FALSE}
 autoplot(bmr, measure = msr("classif.fbeta")) +
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
@@ -381,17 +385,20 @@ As can be seen in Figure \ref{fig:evaluation-results}, the tuned SVM using radia
 
 \newpage
 # Interpretable Machine Learning Methods and Hypotheses
-We first give a brief description of some interpretable machine learning methods we would use to investigate our hypotheses. The methods are more thoroughly described in the Interpertable Machine Learning book^[https://christophm.github.io/interpretable-ml-book/].
+We first give a brief description of some interpretable machine learning methods we would use to investigate our hypotheses. The methods are more thoroughly described in the Interpertable Machine Learning book by Christoph Molnar @molnar2019.
 
 ## Interpretable Machine Learning Methods
+Interpretability is the degree to which a human can understand the cause of a decision
 
 ### Feature Effects
 
-**Partial Dependence Plot (PDP):** The plot shows effect one or two features have on the predicted outcome of an ML model.
+**Partial Dependence Plot (PDP):** The PDP shows marginal effect one or two features have on the predicted outcome of an ML model. From a PDP, we can observe the relationship between the target (response variable) and a predictor variable, whether it is linear, monotonic or more complex. The PDP is calculated by first defining the value grid for the chosen feature x, then for each grid value v, it replaces the value of feature x in every data point to v and averages the predictions. One strong assumption for using PDP is that the feature of interest is not correlated with other features.\
+_Categorical features handling in PDP_: With a categorical feature x, its categories are considered as separate values and used like the value grid as mentioned earlier. The outcome will be k numbers, one for each of k categories.
 
 **Individual Conditional Expectation (ICE) plot:** The plot displays one line per instance that shows how instance's prediction changes when a feature changes. This plot is equivalent to the DPD for individual instances.
 
-**Accumulated Local Effects (ALE) Plots:** A faster and unbiased alternative to PDP. ALE describes how features influence the prediction of an ML model on average. It calculates the differences in predictions instead of averages.
+**Accumulated Local Effects (ALE) Plots:** PDP cannot be trusted when the covariates are strongly correlated. Because of how PDP is calculated, it averages predictions of unlikely instances in the case of strong correlation between features. ALE can counter that effect, in fact, it is a faster and unbiased alternative to PDP. ALE describes how features influence the prediction of an ML model on average. To be specific, with a feature x having (grid) value v, ALE shows how predictions change within a small window (interval) of x around v for the data points in that window.\
+_Categorical features handling in ALE_: to be calculated, ALE needs to know the order of feature values/categories. Therefore, with (unordered) categorical feature, there has to be a way to define that order. A possibility is to order the categories based on their similarity: create a (dis-)similarity matrix between features, apply multidimensional scaling to get one-dimensional distance measure. 
 
 **SHAP Dependence Plots:** An alternative to PDP to visualize feature effects on the model output.
 
@@ -404,10 +411,6 @@ We first give a brief description of some interpretable machine learning methods
 ### Feature Interaction
 
 **H-Statistic:** Friedman's H-Statistic can tell us two things. (1) Whether and to what extent a feature interacts with all other features in the model and (2) whether and to what extent two features interact with one-another.
-
-### Local Interpretation Methods
-
-**Local Surrogate (LIME):** Surrogate models are trained to approximate the predictions of a blackbox model. LIME (Local interpretable model-agnostic explanations) focuses on traing local surrogate models to explain individual predictions.
 
 ### Example-Based Explanations
 
@@ -740,4 +743,8 @@ knitr::include_graphics("plots/counterfactuals_surface_bob.jpg")
 ```
 
 # Conclusion
-Through multiple IML methods, we have presented the interpretation possibility of blackbox models, here in our case it is the radial basis SVM. With our specific dataset South German Credit, the model gives some insights, e.g. the most important feature for the model is the `status` of your checking account; the higher the age, the better the model's predicted credit score; reducing the amount of money you loan and the duration for that loan can improve your model's predicted credit score.   
+Through multiple IML methods, we have presented the interpretation possibility of blackbox models, here in our case it is the radial basis SVM. With our specific dataset South German Credit, the model gives some insights, e.g. the most important feature for the model is the `status` of your checking account; the higher the age, the better the model's predicted credit score; reducing the amount of money you loan and the duration for that loan can improve your model's predicted credit score.  
+
+\newpage
+# References
+<div id="refs"></div>
