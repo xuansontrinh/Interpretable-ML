@@ -388,7 +388,7 @@ As can be seen in Figure \ref{fig:evaluation-results}, the tuned SVM using radia
 We first give a brief description of some interpretable machine learning methods we would use to investigate our hypotheses. The methods are more thoroughly described in the Interpertable Machine Learning book by Christoph Molnar @molnar2019.
 
 ## Interpretable Machine Learning Methods
-Interpretability is the degree to which a human can understand the cause of a decision
+In a non-mathematical manner, Miller defined interpretability as "the degree to which a human can understand the cause of a decision" @miller2018explanation. In the context of machine learning, Kim et al. defined it as "the degree to which a human can consistently predict the model’s result" @NIPS2016_5680522b. This means that a machine learning model is said to have high interpretability if it is easy for humans to reason and comprehend the model's predictions. There are some machine learning models that come naturally with this condition e.g. linear regression, logistic regression, decision tree, etc. With this report, however, we redirect your focus to the set of methods that helps humans comprehend the decisions of even low-interpretability machine learning models. The methods that we present later can help make sense the effects of features on the final outcome of the model, show the importance of features w.r.t. the model, how the features interact with each other, and give (counter-)examples to give insight into the behavior of the model.
 
 ### Feature Effects
 
