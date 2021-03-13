@@ -157,7 +157,7 @@ pos <- po("scale") %>>%
   encoder %>>% po_over
 ```
 
-```{r out.width='50%', fig.align='center', fig.cap="\\label{fig:pipeops}Radial SVM pipeline graph", echo=FALSE}
+```{r out.width='55%', fig.align='center', fig.cap="\\label{fig:pipeops}Radial SVM pipeline graph", echo=FALSE}
 knitr::include_graphics("plots/pipeops.png")
 ```
 
@@ -188,6 +188,7 @@ xgboost_pipeline <- pos %>>% xgboost_learner
 xgboost_glearner <- GraphLearner$new(xgboost_pipeline, id="xg_boost", predict_type = "prob")
 
 xgboost_search_space <- ParamSet$new(list(
+  ParamDbl$new("threshold.thresholds", lower = 0, upper = 1),
   ParamDbl$new("classif.xgboost.eta", lower = 0.1, upper = 0.3),
   ParamDbl$new("classif.xgboost.colsample_bytree", lower = 0.5, upper = 0.9),
   ParamInt$new("classif.xgboost.max_depth", lower = 8, upper = 16),
@@ -272,9 +273,9 @@ In a non-mathematical manner, Miller defined interpretability as "the degree to 
 **Partial Dependence Plot (PDP):** The PDP shows marginal effect one or two features have on the predicted outcome of an ML model. From a PDP, we can observe the relationship between the target (response variable) and a predictor variable, whether it is linear, monotonic or more complex. The PDP is calculated by first defining the value grid for the chosen feature x, then for each grid value v, it replaces the value of feature x in every data point to v and averages the predictions. One strong assumption for using PDP is that the feature of interest is not correlated with other features.\
 The partial dependence function for regression is defined and approximated as:
 $$
-\hat f_{x_S}(x_S) = E_{x_C}[\hat f(x_S, x_C)] = \int \hat f(x_S, x_C)d\mathbb{P}(x_C) \approx \sum_{i = 1}^n \hat f (x_S, x_C^{(i)})
+\hat f_{\vec{x}_S}(\vec{x}_S) = E_{\vec{x}_C}[\hat f(\vec{x}_S, \vec{x}_C)] = \int \hat f(\vec{x}_S, \vec{x}_C)d\mathbb{P}(\vec{x}_C) \approx \sum_{i = 1}^n \hat f (\vec{x}_S, \vec{x}_C^{(i)})
 $$
-where $\hat f$ is the model, $x_S$ are the features to get partial dependence function plotted and $x_C$ are the other features, $x_C^{(i)}$ are the actual feature values from the dataset, $n$ is the sample size. The approximation for the partial dependence function is calculated using the averages from the training data @molnar2019.\
+where $\hat f$ is the model, $\vec{x}_S$ are the features to get partial dependence function plotted and $\vec{x}_C$ are the other features, $\vec{x}_C^{(i)}$ are the actual feature values from the dataset, $n$ is the sample size. The approximation for the partial dependence function is calculated using the averages from the training data @molnar2019.\
 _Categorical features handling in PDP_: With a categorical feature x, its categories are considered as separate values and used like the value grid as mentioned earlier. The outcome will be k numbers, one for each of k categories.
 
 **Individual Conditional Expectation (ICE) plot:** The plot displays one line per instance that shows how instance's prediction changes when a feature changes. This plot is equivalent to the DPD for individual instances.
@@ -282,31 +283,50 @@ _Categorical features handling in PDP_: With a categorical feature x, its catego
 **Accumulated Local Effects (ALE) Plots:** PDP cannot be trusted when the covariates are strongly correlated. Because of how PDP is calculated, it averages predictions of unlikely instances in the case of strong correlation between features. ALE can counter that effect, in fact, it is a faster and unbiased alternative to PDP. ALE describes how features influence the prediction of an ML model on average. To be specific, with a feature x having (grid) value v, ALE shows how predictions change within a small window (interval) of x around v for the data points in that window.\
 _Categorical features handling in ALE_: to be calculated, ALE needs to know the order of feature values/categories. Therefore, with (unordered) categorical feature, there has to be a way to define that order. A possibility is to order the categories based on their similarity: create a (dis-)similarity matrix between features, apply multidimensional scaling to get one-dimensional distance measure. This is also a thing to keep in mind when interpreting ALE plot of (unordered) categorical feature: it is assumed to have a specific order, and how that order is defined depends on the implementation of algorithms, whether in real life this order makes sense or not.
 
-**SHAP Dependence Plots:** An alternative to PDP to visualize feature effects on the model output.
-
-**SHAP Summary Plots:** Visualizes feature importance and effects in a single plot.
+**Shapley Value:** This is a method to estimate feature contributions to a single prediction compared to the average prediction (over all data instances). The shapley value $\phi_{j}$ of a feature $j$ is interpreted as the feature's contribution to the prediction of a particular instance compared to the average prediction for the dataset. See [@molnar2019] for the mathematical details on estimating the shapley value for a feature.
 
 ### Global Feature Importance
 
-**Permutation Feature Importance:** It measures the increase in prediction error after permuting the feature values. The feature importance for a feature $j$ given a dataset $X$ and a dataset $X^{perm}$ where the feature is permuted, is calculated as shown below:
+**Permutation Feature Importance:** It measures the increase in prediction error after permuting the feature values. The feature importance for a feature $j$ given a data matrix $X$ and a data matrix $X^{perm}$ where the feature is permuted, is calculated as shown below:
 
 $$
 FI^{j} = \dfrac{e^{perm}}{e^{orig}}
 $$
 $$
-e^{perm} = 1 - F_{1}(y, f(X^{perm}))
+e^{perm} = 1 - F_{1}(\vec{y}, \vec{f}(X^{perm}))
 $$
 $$
-e^{orig} = 1 - F_{1}(y, f(X))
+e^{orig} = 1 - F_{1}(\vec{y}, \vec{f}(X))
 $$
+Here $1-F_{1}$ is a loss measure based on the $F_{1}$ score. In this paper we compute feature importance on training data, which measures how much a model relies on each feature for making predictions.
 
 ### Feature Interaction
 
-**H-Statistic:** Friedman's H-Statistic can tell us two things. (1) Whether and to what extent a feature interacts with all other features in the model and (2) whether and to what extent two features interact with one-another.
+**H-Statistic:** The interaction between two features is defined as the change in the prediction that occurs when varying the features after considering the individual feature effects. I measure of the interaction strength is the H-Statistic. It measures how much of the variation of the prediction depends on the interaction of the features.
+In the absence of any interaction effect between two features. The partial dependence function $PD_{jk}(x_{j}, x_{k})$ between two features can be decompose as shown below:
+$$
+PD_{jk}(x_{j}, x_{k}) = PD_{j}(x_{j}) + PD_{k}(x_{k})
+$$
+Equivalently, if a feature does not interact with any other feature. The prediction function $\hat{f}(\vec{x})$ can be decomposed as follows:
+$$
+\hat{f}(\vec{x}) = PD_{j}(x_{j}) + PD_{-j}(\vec{x}_{-j})
+$$
+where $PD_{-j}(\textbf{x}_{-j})$ is the partial dependence function that depends on all featuers except the j-th feature.
+
+Friedman's H-Statistic can tell us two things:
+
+1. whether and to what extent two features interact with one-another, computed as:
+$$
+H^{2}_{jk} = \dfrac{ \sum_{i=1}^{n}\biggl[PD_{jk}(x_{j}^{(i)}, x_{k}^{(i)}) - PD_{j}(x_{j}^{(i)}) - PD_{k}(x_{k}^{(i)})\biggr]^{2}}{\sum_{i=1}^{n}PD^{2}_{jk}(x_{j}^{(i)}, x_{k}^{(i)})}
+$$
+2. Whether and to what extent a feature interacts with all other features in the model,:
+$$
+H^{2}_{j} = \dfrac{ \sum_{i=1}^{n}\biggl[\hat{f}(\vec{x}^{(i)}) - PD_{j}(x_{j}^{(i)}) - PD_{-j}(\vec{x}_{-j}^{(i)})\biggr]^{2}}{\sum_{i=1}^{n}\hat{f}(\vec{x}^{(i)})}
+$$
 
 ### Example-Based Explanations
 
-**Counterfactual Explanations:** A counterfactual explanation of a prediction describes the smallest change to the feature values that changes the prediction to the predefined output.
+**Counterfactual Explanations:** A counterfactual explanation of a prediction describes the smallest change to the feature values that changes the prediction to a predefined output.
 
 
 ## Story Time
