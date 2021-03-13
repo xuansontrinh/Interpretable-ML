@@ -78,6 +78,7 @@ james[1, ] <- temp[, colnames(x)]
 task <- TaskClassif$new("german-credit",
   backend = data, target = "credit_risk", positive = "good"
 )
+task$col_roles$stratum <- "credit_risk"
 
 
 fencoder <- po("encode",
@@ -111,10 +112,9 @@ terminator <- trm("evals", n_evals = 40)
 radial_svm_learner <- lrn("classif.svm",
   type = "C-classification", kernel = "radial", predict_type = "prob"
 )
-radial_svm_pipeline <- pos %>>% radial_svm_learner %>>% po("threshold")
+radial_svm_pipeline <- pos %>>% radial_svm_learner
 radial_svm_glearner <- GraphLearner$new(radial_svm_pipeline, id = "radial_svm")
 radial_svm_search_space <- ParamSet$new(list(
-  ParamDbl$new("threshold.thresholds", lower = 0, upper = 1),
   ParamDbl$new("classif.svm.cost", lower = 0.01, upper = 100),
   ParamDbl$new("classif.svm.gamma", lower = 0.0001, upper = 1)
 ))
