@@ -106,6 +106,7 @@ task$col_roles$stratum <- "credit_risk"
 ```{r warning=FALSE, results='hold', echo=FALSE}
 skimr::skim_without_charts(data)
 ```
+
 The data set doesn't have any missing values and requires little preprocessing to fit our model. It can also be pointed out that the data has class-imbalance problem: The number of "good" credited people is more than twice the number of "bad" credited people (700 to 300), as seen in the data set summary above.
 
 # Model Selection
@@ -124,8 +125,12 @@ For preprocessing, we do the following:
 
 - Standardize numerical variables by centering them around their mean and scaling them by their root-mean-square.
 - One-hot encode factor and ordered-factor variables.
-- To account for the class imbalance in the data set, we perform oversampling of the minority class ("bad" class).
-```{r}
+- To account for the class imbalance in the data set, we perform oversampling of the minority class ("bad" class). We set the oversampling ratio at `2.3`.
+- To make the model aware of the classification cost, we apply thresholding. The `threshold` is the probability value over which a model predicts the positive class, (e.g. predict "good" if the model output is > `0.5`). The `threshold` parameter is tuned together with other model parameters.
+
+We use `mlr3pipelines`^[https://mlr3pipelines.mlr-org.com/] to build a learner that combines both data processing and modeling. Figure \ref{fig:pipeops} shows the pipeline for the radial basis kernel svm.
+
+```{r, include=FALSE}
 # PipeOps
 fencoder <- po("encode",
   method = "one-hot",
@@ -151,115 +156,33 @@ threshold <- po("threshold")
 pos <- po("scale") %>>%
   encoder %>>% po_over
 ```
-## Tuning and Benchmarking
-The parameter tuning is done with the following settings for all models. The tuning code is available in the `.Rmd` source file.
-```{r}
-# tuning settings
-inner_cv5 <- rsmp("cv", folds = 5L)
-measure <- msr("classif.fbeta")
-tuner <- tnr("random_search")
-terminator <- trm("evals", n_evals = 40)
+
+```{r out.width='50%', fig.align='center', fig.cap="\\label{fig:pipeops}Radial SVM pipeline graph", echo=FALSE}
+knitr::include_graphics("plots/pipeops.png")
 ```
 
+**Note**: Using `mlr3pipelines` in combination with `iml` has the advantage that the interpretation is always done with respect to the original features (e.g., before one-hot encoding). This is because pipeline fuses data preprocessing and modeling to a sing unit. This implies that the model itself is a pipeline.
+
+## Tuning and Benchmarking
+We use nested resampling^[https://mlr3book.mlr-org.com/nested-resampling.html] in order to obtain unbiased performance estimates for the different learners. The parameter tuning is done with the following settings for all models. The tuning code is available in the `source code.R` file in the code repository.
+```{r}
+# tuning settings
+measure <- msr("classif.fbeta")
+tuner <- tnr("random_search")
+inner_cv5 <- rsmp("cv", folds = 5L)
+outer_cv3 <- rsmp("cv", folds = 3L)
+terminator <- trm("evals", n_evals = 40)
+```
+As can be seen in the code snippet above, we use the `F1 score` (`beta = 1`) as our tuning performance measure.
+The `F1 score` is a classification measure defined as the harmonic mean of the classification precision and recall. This makes the `F1` measure particularly suitable for class imbalance problems.
+$$
+F_{1} = 2 \cdot \dfrac{precision \cdot recall}{precision + recall}
+$$
+We use `random_search` as it was demonstrated to be more efficient for hyperparameter optimization that `grid_search` by [@Bergstra2012]. The number of inner and outer crossvalidation folds and terminator evaluations of the nested resampling are set so as to train be able to evaluate the different models in a reasonable amount of time on limited computing resources.
+
+The code snippet below shows the tuning setup for xgboost and the radial basis kernel svm. Please refer to the code in `source code.R` for the other models tuning configuration.
 ```{r, eval=FALSE}
-# Logistic regression
-log_reg_learner <- lrn("classif.log_reg", predict_type = "prob")
-log_reg_pipeline <- pos %>>% log_reg_learner %>>% threshold
-log_reg_glearner <- GraphLearner$new(log_reg_pipeline, id = "log_reg")
-
-log_reg_at <- AutoTuner$new(
-  learner = log_reg_glearner,
-  resampling = inner_cv5,
-  measure = measure,
-  search_space = ParamSet$new(list(ParamDbl$new(
-    "threshold.thresholds",
-    lower = 0,
-    upper = 1
-  ))),
-  terminator = terminator,
-  tuner = tuner
-)
-
-# Regression trees
-rpart_learner <- lrn("classif.rpart", predict_type = "prob")
-rpart_pipeline <- pos %>>% rpart_learner %>>% threshold
-rpart_glearner <- GraphLearner$new(rpart_pipeline, id = "rpart")
-
-rpart_at <- AutoTuner$new(
-  learner = rpart_glearner,
-  resampling = inner_cv5,
-  measure = measure,
-  search_space = ParamSet$new(list(ParamDbl$new(
-    "threshold.thresholds",
-    lower = 0,
-    upper = 1
-  ))),
-  terminator = terminator,
-  tuner = tuner
-)
-
-fct_rpart_pipeline <- int_to_num %>>%
-  po_over %>>%
-  rpart_learner %>>%
-  po("threshold")
-fct_rpart_glearner <- GraphLearner$new(fct_rpart_pipeline, id = "fct_rpart")
-
-fct_rpart_at <- AutoTuner$new(
-  learner = fct_rpart_glearner,
-  resampling = inner_cv5,
-  measure = measure,
-  search_space = ParamSet$new(list(ParamDbl$new(
-    "threshold.thresholds",
-    lower = 0,
-    upper = 1
-  ))),
-  terminator = terminator,
-  tuner = tuner
-)
-
-# Random forest
-ranger_pipeline <- pos %>>% lrn("classif.ranger",
-  predict_type = "prob"
-) %>>% threshold
-ranger_glearner <- GraphLearner$new(ranger_pipeline, id = "ranger")
-
-ranger_tune_ps <- ParamSet$new(list(
-  ParamDbl$new("threshold.thresholds", lower = 0, upper = 1),
-  ParamInt$new("classif.ranger.num.trees",
-    lower = 100, upper = 140
-  ), # number of trees
-  ParamInt$new("classif.ranger.mtry",
-    lower = 1, upper = ceiling(task$ncol / 2)
-  ), # number of variables to possibly split at in each node
-  ParamInt$new("classif.ranger.max.depth",
-    lower = 2, upper = 20
-  ) # maximum depth of the tree
-))
-
-ranger_at <- AutoTuner$new(
-  learner = ranger_glearner,
-  resampling = inner_cv5,
-  measure = measure,
-  search_space = ranger_tune_ps,
-  terminator = terminator,
-  tuner = tuner
-)
-
-fct_ranger_pipeline <- int_to_num %>>%
-  po_over %>>%
-  lrn("classif.ranger", predict_type = "prob") %>>%
-  po("threshold")
-fct_ranger_glearner <- GraphLearner$new(fct_ranger_pipeline, id = "fct_ranger")
-
-fct_ranger_at <- AutoTuner$new(
-  learner = fct_ranger_glearner,
-  resampling = inner_cv5,
-  measure = measure,
-  search_space = ranger_tune_ps,
-  terminator = terminator,
-  tuner = tuner
-)
-
+# xgboost
 xgboost_learner <- po(lrn("classif.xgboost", predict_type="prob"))
 xgboost_pipeline <- pos %>>% xgboost_learner
 xgboost_glearner <- GraphLearner$new(xgboost_pipeline, id="xg_boost", predict_type = "prob")
@@ -286,37 +209,13 @@ xgboost_at <- AutoTuner$new(
   measure = measure
 )
 
-# Svms
-linear_svm_learner <- lrn("classif.svm",
-  type = "C-classification", kernel = "linear",
-  predict_type = "prob"
-)
-poly_svm_learner <- lrn("classif.svm",
-  type = "C-classification", kernel = "polynomial",
-  predict_type = "prob"
-)
+# SVM
 radial_svm_learner <- lrn("classif.svm",
   type = "C-classification", kernel = "radial",
   predict_type = "prob"
 )
-
-# Pipelines
-linear_svm_pipeline <- pos %>>% linear_svm_learner %>>% threshold
-poly_svm_pipeline <- pos %>>% poly_svm_learner %>>% threshold
 radial_svm_pipeline <- pos %>>% radial_svm_learner %>>% threshold
-
-# Learners
-linear_svm_glearner <- GraphLearner$new(linear_svm_pipeline, id = "linear_svm")
-poly_svm_glearner <- GraphLearner$new(poly_svm_pipeline, id = "poly_svm")
 radial_svm_glearner <- GraphLearner$new(radial_svm_pipeline, id = "radial_svm")
-
-# Search spaces
-poly_svm_search_space <- ParamSet$new(list(
-  ParamDbl$new("threshold.thresholds", lower = 0, upper = 1),
-  ParamDbl$new("classif.svm.cost", lower = 0.01, upper = 100),
-  ParamDbl$new("classif.svm.gamma", lower = 0.0001, upper = 1),
-  ParamInt$new("classif.svm.degree", lower = 1, upper = 4)
-))
 
 radial_svm_search_space <- ParamSet$new(list(
   ParamDbl$new("threshold.thresholds", lower = 0, upper = 1),
@@ -324,27 +223,6 @@ radial_svm_search_space <- ParamSet$new(list(
   ParamDbl$new("classif.svm.gamma", lower = 0.0001, upper = 1)
 ))
 
-linear_svm_search_space <- ParamSet$new(list(
-  ParamDbl$new("threshold.thresholds", lower = 0, upper = 1),
-  ParamDbl$new("classif.svm.cost", lower = 0.01, upper = 100)
-))
-
-linear_svm_at <- AutoTuner$new(
-  learner = linear_svm_glearner,
-  resampling = inner_cv5,
-  terminator = terminator,
-  search_space = linear_svm_search_space,
-  tuner = tuner,
-  measure = measure
-)
-poly_svm_at <- AutoTuner$new(
-  learner = poly_svm_glearner,
-  resampling = inner_cv5,
-  terminator = terminator,
-  search_space = poly_svm_search_space,
-  tuner = tuner,
-  measure = measure
-)
 radial_svm_at <- AutoTuner$new(
   learner = radial_svm_glearner,
   resampling = inner_cv5,
@@ -353,9 +231,7 @@ radial_svm_at <- AutoTuner$new(
   tuner = tuner,
   measure = measure
 )
-```
-```{r, include=FALSE, eval=FALSE}
-outer_cv3 <- rsmp("cv", folds = 3L)
+
 design <- benchmark_grid(
   task = task,
   learners = list(
@@ -368,20 +244,21 @@ design <- benchmark_grid(
   ),
   resamplings = outer_cv3
 )
-bmr <- benchmark(design)
+# bmr <- benchmark(design)
 ```
 
+\newpage
 ## Result
 
 ```{r, eval=FALSE}
 autoplot(bmr, measure = msr("classif.fbeta")) +
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
 ```
-```{r evaluation-results, out.width='70%', fig.align='center', fig.cap="\\label{fig:evalutation-results}Evaluation", echo=FALSE}
+```{r evaluation-results, out.width='60%', fig.align='center', fig.cap="\\label{fig:evalutation-results}Evaluation", echo=FALSE}
 knitr::include_graphics("plots/fbeta_eval.png")
 ```
 
-As can be seen in Figure \ref{fig:evaluation-results}, the tuned SVM using radial basis kernel has the best performance (highest F1 score) and therefore is used for subsequent interpretations. We also observe that the performance of decision tree and random forest does not change much, when categorical variables are not converted to numerics (See box plots in Figure \ref{fig:evaluation-results} labeled `fct_`).
+As can be seen in Figure \ref{fig:evaluation-results}, the tuned SVM using radial basis kernel has the best performance (highest F1 score) and therefore is used for subsequent interpretations. We also observe that the performance of decision tree and random forest does not change much, when categorical variables are not one-hot encoded (See box plots in Figure \ref{fig:evaluation-results} labeled `fct_`).
 
 \newpage
 # Interpretable Machine Learning Methods and Hypotheses
@@ -398,7 +275,7 @@ _Categorical features handling in PDP_: With a categorical feature x, its catego
 **Individual Conditional Expectation (ICE) plot:** The plot displays one line per instance that shows how instance's prediction changes when a feature changes. This plot is equivalent to the DPD for individual instances.
 
 **Accumulated Local Effects (ALE) Plots:** PDP cannot be trusted when the covariates are strongly correlated. Because of how PDP is calculated, it averages predictions of unlikely instances in the case of strong correlation between features. ALE can counter that effect, in fact, it is a faster and unbiased alternative to PDP. ALE describes how features influence the prediction of an ML model on average. To be specific, with a feature x having (grid) value v, ALE shows how predictions change within a small window (interval) of x around v for the data points in that window.\
-_Categorical features handling in ALE_: to be calculated, ALE needs to know the order of feature values/categories. Therefore, with (unordered) categorical feature, there has to be a way to define that order. A possibility is to order the categories based on their similarity: create a (dis-)similarity matrix between features, apply multidimensional scaling to get one-dimensional distance measure. This is also a thing to keep in mind when interpreting ALE plot of (unordered) categorical feature: it is assumed to have a specific order, and how that order is defined depends on the implementation of algorithms, whether in real life this order makes sense or not. 
+_Categorical features handling in ALE_: to be calculated, ALE needs to know the order of feature values/categories. Therefore, with (unordered) categorical feature, there has to be a way to define that order. A possibility is to order the categories based on their similarity: create a (dis-)similarity matrix between features, apply multidimensional scaling to get one-dimensional distance measure. This is also a thing to keep in mind when interpreting ALE plot of (unordered) categorical feature: it is assumed to have a specific order, and how that order is defined depends on the implementation of algorithms, whether in real life this order makes sense or not.
 
 **SHAP Dependence Plots:** An alternative to PDP to visualize feature effects on the model output.
 
@@ -406,7 +283,17 @@ _Categorical features handling in ALE_: to be calculated, ALE needs to know the 
 
 ### Global Feature Importance
 
-**Permutation Feature Importance:** It measures the increase in prediction error after permuting the feature values.
+**Permutation Feature Importance:** It measures the increase in prediction error after permuting the feature values. The feature importance for a feature $j$ given a dataset $X$ and a dataset $X^{perm}$ where the feature is permuted, is calculated as shown below:
+
+$$
+FI^{j} = \dfrac{e^{perm}}{e^{orig}}
+$$
+$$
+e^{perm} = 1 - F_{1}(y, f(X^{perm}))
+$$
+$$
+e^{orig} = 1 - F_{1}(y, f(X))
+$$
 
 ### Feature Interaction
 
@@ -422,7 +309,7 @@ Bob is a 30 year old, senior data scientist in Munich. He has been married for 5
 Bob wanted to loan some money for starting his own company. However, after checking his credit, the bank said no to his request.
 In contrast, with his best friend, James, the story is different. James is a doctor, the same age as Bob, and he is single. James wanted a loan to purchase a car and got a green light from the bank.
 
-Although Bob is happy for James, he is very frustrated and curious about why the bank made those decisions. Although from the first look, his profile seems very good.  So he decides to investigate the problem to gain some insights. but for that purpose,  he needs a dataset. After a few hours of searching, he found the south German credit data set that was used for predicting credit in the banks. And also, as he does not have the exact algorithm, or any kind of machine learning model that the bank uses, he resorted to his own model choice on the dataset. He selected some of the baseline models and some black box models to benchmark to choose a good one. And his final choice is the support vector machine using radial basis kernel. His model performs really well on test data, which reassures him that it can be used in place of the bank’s model. He also applies the model on his case and his friend’s case. The model predicts a bad credit_risk for him and good credit_risk for his friend, this decision is in accordance with the bank’s decision that he loans from. This motivates him to understand the model even more, with the aim of improving his credit. 
+Although Bob is happy for James, he is very frustrated and curious about why the bank made those decisions. Although from the first look, his profile seems very good.  So he decides to investigate the problem to gain some insights. but for that purpose,  he needs a dataset. After a few hours of searching, he found the south German credit data set that was used for predicting credit in the banks. And also, as he does not have the exact algorithm, or any kind of machine learning model that the bank uses, he resorted to his own model choice on the dataset. He selected some of the baseline models and some black box models to benchmark to choose a good one. And his final choice is the support vector machine using radial basis kernel. His model performs really well on test data, which reassures him that it can be used in place of the bank’s model. He also applies the model on his case and his friend’s case. The model predicts a bad credit_risk for him and good credit_risk for his friend, this decision is in accordance with the bank’s decision that he loans from. This motivates him to understand the model even more, with the aim of improving his credit.
 
 Now, the problem is how to interpret the model as SVM is a blackbox model. To do that, he applied some Interpretable Machine Learning methods and unearthed the characteristics of the model’s decisions. First, he wants to get a general understanding of the model and verifies that its predictions make sense. Second, he would investigate, much like a detective, his and his friend's case (Bob's and Jame's feature instances are shown below).
 ```{r, include=FALSE}
@@ -743,7 +630,7 @@ knitr::include_graphics("plots/counterfactuals_surface_bob.jpg")
 ```
 
 # Conclusion
-Through multiple IML methods, we have presented the interpretation possibility of blackbox models, here in our case it is the radial basis SVM. With our specific dataset South German Credit, the model gives some insights, e.g. the most important feature for the model is the `status` of your checking account; the higher the age, the better the model's predicted credit score; reducing the amount of money you loan and the duration for that loan can improve your model's predicted credit score.  
+Through multiple IML methods, we have presented the interpretation possibility of blackbox models, here in our case it is the radial basis SVM. With our specific dataset South German Credit, the model gives some insights, e.g. the most important feature for the model is the `status` of your checking account; the higher the age, the better the model's predicted credit score; reducing the amount of money you loan and the duration for that loan can improve your model's predicted credit score.
 
 \newpage
 # References
