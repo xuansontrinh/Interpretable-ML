@@ -40,7 +40,7 @@ vignettes/*.pdf
 .DS_Store
 
 # output files (pdf, html)
-*.pdf
+IML-Report.pdf
 *.html
 *.tex
 *.log
