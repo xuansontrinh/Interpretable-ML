@@ -267,7 +267,36 @@ knitr::include_graphics("plots/bacc_eval.png")
 knitr::include_graphics("plots/fbeta_eval.png")
 ```
 
-As can be seen in Figure \ref{fig:evaluation-results-bacc} and Figure \ref{fig:evaluation-results-fbeta}, the tuned SVM using radial basis kernel consistently achieves top performance in both the nested cross validation plots using `F1` score and `bacc` score and therefore is used for subsequent interpretations. We also observe that the performance of decision tree and random forest does not change much, when categorical variables are not one-hot encoded (See box plots in Figure \ref{fig:evaluation-results-bacc} and Figure \ref{fig:evaluation-results-fbeta} labeled `fct_`).
+| Learner           | (Aggregated) Bacc Score   | Bacc Score Ranking |
+|------------------|----------------|-------------|
+|    log_reg.tuned |    0.6938901   | 4           |
+|      rpart.tuned |    0.6474967   | 8           |
+|  fct_rpart.tuned |    0.6567134   | 7           |
+|     ranger.tuned |    0.7070398   | 2           |
+| fct_ranger.tuned |    0.7102758   | 1           |
+|   xg_boost.tuned |    0.6872560   | 6           |
+| linear_svm.tuned |    0.6928462   | 5           |
+|   poly_svm.tuned |    0.6428362   | 9           |
+| radial_svm.tuned |    0.6963865   | 3           |
+
+Table: Bacc Aggregated Benchmark Results
+
+
+| Learner           | (Aggregated) F1 Score    | F1 Score Ranking |
+|------------------|----------------|-------------|
+|log_reg.tuned     |   0.7705923    | 4           | 
+|rpart.tuned       |   0.7423392    | 7           |
+|fct_rpart.tuned   |   0.7440794    | 6           |
+|ranger.tuned      |   0.7798829    | 2           |
+|fct_ranger.tuned  |   0.7742013    | 3           |
+|xg_boost.tuned    |   0.7054896    | 8           |
+|linear_svm.tuned  |   0.6906385    | 9           |
+|poly_svm.tuned    |   0.7536278    | 5           |
+|radial_svm.tuned  |   0.8166631    | 1           |
+
+Table: F1 Aggregated Benchmark Results
+
+As can be seen in Figure \ref{fig:evaluation-results-bacc} and Figure \ref{fig:evaluation-results-fbeta} and the benchmark results tables above, the tuned SVM using radial basis kernel consistently achieves top performance in both the nested cross validation plots using `F1` score (1st place) and `bacc` score (3rd place, considering that the differences in the performance using `bacc` are very small) and therefore is used for subsequent interpretations. We also observe that the performance of decision tree and random forest does not change much, when categorical variables are not one-hot encoded (See box plots in Figure \ref{fig:evaluation-results-bacc} and Figure \ref{fig:evaluation-results-fbeta} labeled `fct_`).
 
 Finally, we train the chosen SVM model on the whole dataset and proceed to analyzing it using IML methods.
 ```{r, eval=FALSE}
