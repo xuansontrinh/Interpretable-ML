@@ -127,7 +127,7 @@ For preprocessing, we do the following:
 
 - Standardize numerical variables by centering them around their mean and scaling them by their root-mean-square.
 - One-hot encode factor and ordered-factor variables.
-- To account for the class imbalance in the data set, we perform oversampling of the minority class ("bad" class). We set the oversampling ratio at `2.3`.
+- To account for the class imbalance in the data set, we perform oversampling of the minority class ("bad" class). We set the oversampling ratio at `2.3`, as this is approximately the factor by which the minority class varies from the majority class.
 - To make the model aware of the classification cost, we apply thresholding. The `threshold` is the probability value over which a model predicts the positive class, (e.g. predict "good" if the model output is > `0.5`). The `threshold` parameter is tuned together with other model parameters.
 
 We use `mlr3pipelines`^[https://mlr3pipelines.mlr-org.com/] to build a learner that combines both data processing and modeling. Figure \ref{fig:pipeops} shows the pipeline for the radial basis kernel SVM.
