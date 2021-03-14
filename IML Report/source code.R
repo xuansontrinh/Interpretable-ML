@@ -102,12 +102,6 @@ fct_ranger_at <- AutoTuner$new(
   tuner = tuner
 )
 
-
-
-
-
-
-
 xgboost_learner <- lrn("classif.xgboost", nrounds = 100, predict_type = "prob") %>>% po("threshold")
 xgboost_pipeline <- pos %>>% xgboost_learner
 xgboost_glearner <- GraphLearner$new(xgboost_pipeline, id="xg_boost")
@@ -134,16 +128,6 @@ xgboost_at <- AutoTuner$new(
   tuner = tuner,
   measure = measure
 )
-
-
-
-
-
-
-
-
-
-
 
 linear_svm_learner <- lrn("classif.svm",
                           type = "C-classification", kernel = "linear", predict_type = "prob"

@@ -6,10 +6,6 @@ library(iml)
 
 set.seed(20211301)
 
-
-
-
-
 load("./south-german-credit.Rda")
 data <- lapply(data, function(x) if(is.integer(x)) as.numeric(x) else x)
 data <- lapply(data, function(x) if(is.ordered(x)) factor(x, ordered = FALSE) else x)

@@ -254,6 +254,8 @@ design <- benchmark_grid(
 \newpage
 ## Result
 
+We use the `F1` score (the harmonic mean of the precision and recall) as an additional measure for comparison with `bacc` in the evaluation of the results.
+
 ```{r, eval=FALSE}
 autoplot(bmr, measure = msr("classif.bacc")) +
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
@@ -296,7 +298,7 @@ Table: Bacc Aggregated Benchmark Results
 
 Table: F1 Aggregated Benchmark Results
 
-As can be seen in Figure \ref{fig:evaluation-results-bacc} and Figure \ref{fig:evaluation-results-fbeta} and the benchmark results tables above, the tuned SVM using radial basis kernel consistently achieves top performance in both the nested cross validation plots using `F1` score (1st place) and `bacc` score (3rd place, considering that the differences in the performance using `bacc` are very small) and therefore is used for subsequent interpretations. We also observe that the performance of decision tree and random forest does not change much, when categorical variables are not one-hot encoded (See box plots in Figure \ref{fig:evaluation-results-bacc} and Figure \ref{fig:evaluation-results-fbeta} labeled `fct_`).
+As can be seen in Figure \ref{fig:evaluation-results-bacc} and Figure \ref{fig:evaluation-results-fbeta} and the benchmark results tables above, the tuned SVM using radial basis kernel and the random forest models (`ranger` and `fct_ranger`) consistently achieve top performance with respect to both the `bacc` and `F1` measures. We choose the radial kernel SVM, which has the highest aggregated `F1` score and the third highest `bacc` score (also considering that the differences in the top aggregated `bacc` scores are very small). The radial basis SVM model is therefore used for subsequent interpretations. We also observe that the performance of decision tree and random forest does not change much, when categorical variables are not one-hot encoded (See box plots in Figure \ref{fig:evaluation-results-bacc} and Figure \ref{fig:evaluation-results-fbeta} labeled `fct_`).
 
 Finally, we train the chosen SVM model on the whole dataset and proceed to analyzing it using IML methods.
 ```{r, eval=FALSE}
@@ -609,8 +611,8 @@ best_params <- readRDS("../best_configs.rds")
 ```
 
 
-5. What can Bob do to improve his credit, i.e. to be considered `good` (according to this model)? \
-To help Bob, we use the counterfactual explanations to see if there is any combination of changes that can be proposed to mitigate Bob's predicted `credit_risk`. The counterfactuals are presented in Table \ref{tab:counterfactual-diff-results}. In this table, we filter out instances having changing values on features such as `age` and `foreign_worker` status as it is not realistic to change that. Also, a lot of other features are filtered out from the final counterfactuals table as they are unchanged. We also only consider the counterfactuals that have probability greater than 0.5 (which is the threshold for good `credit_risk`). As a result, the features that need to be changed the most to help improve Bob's credit is `duration` and `amount`, where `amount` was changed almost in all of the counterfactuals (97%), followed by `duration` (63%). To be specific, if Bob reduced the credit amount he loans or reduced the credit duration or both, while keeping other elements (other covariates of the model) fixed, the model would predict a better `credit_risk` for him. A detailed look into the effect of these two features on Bob's credit probability are given in Figure \ref{fig:counterfactuals-surface-bob}, which confirms why the changes in these features are recommended by the model.
+4. What can Bob do to improve his credit, i.e. to be considered `good` (according to this model)? \
+To help Bob, we use the counterfactual explanations to see if there is any combination of changes that can be proposed to mitigate Bob's predicted `credit_risk`. The counterfactuals are presented in Table \ref{tab:counterfactual-diff-results}. In this table, we filter out instances having changing values on features such as `age` and `foreign_worker` status as it is not realistic to change that (generally, instances with unrealistic feature values are manually filtered out). Also, a lot of other features are filtered out from the final counterfactuals table as they are unchanged. We also only consider the counterfactuals that have probability greater than 0.5 (which is the threshold for good `credit_risk`). As a result, the features that need to be changed the most to help improve Bob's credit is `duration` and `amount`, where `amount` was changed almost in all of the counterfactuals (97%), followed by `duration` (63%). To be specific, if Bob reduced the credit amount he loans or reduced the credit duration or both, while keeping other elements (other covariates of the model) fixed, the model would predict a better `credit_risk` for him. A detailed look into the effect of these two features on Bob's credit probability are given in Figure \ref{fig:counterfactuals-surface-bob}, which confirms why the changes in these features are recommended by the model.
 
 ```{r, eval=FALSE, include=FALSE}
 cf <- Counterfactuals$new(
