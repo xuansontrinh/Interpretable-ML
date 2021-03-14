@@ -3,6 +3,7 @@ title: "Interpretable Machine Learning Scope Definition Report"
 author:
   - Xuan-Son Trinh^[Ludwig Maximilian University of Munich, Son.Trinh@campus.lmu.de]
   - Victor Tuekam^[Ludwig Maximilian University of Munich, t.victor@campus.lmu.de]
+date: "`r format(Sys.time(), '%B, %Y')`"
 output:
   pdf_document:
     citation_package: default
@@ -273,7 +274,7 @@ As can be seen in Figure \ref{fig:evaluation-results-bacc} and Figure \ref{fig:e
 We first give a brief description of some interpretable machine learning methods we would use to investigate our hypotheses. The methods are more thoroughly described in the Interpertable Machine Learning book by Christoph Molnar @molnar2019.
 
 ## Interpretable Machine Learning Methods
-In a non-mathematical manner, Miller defined interpretability as "the degree to which a human can understand the cause of a decision" @miller2018explanation. In the context of machine learning, Kim et al. defined it as "the degree to which a human can consistently predict the model’s result" @NIPS2016_5680522b. This means that a machine learning model is said to have high interpretability if it is easy for humans to reason and comprehend the model's predictions. There are some machine learning models that come naturally with this ability e.g. linear regression, logistic regression, decision tree, etc. With this report, however, we redirect your focus to the set of methods that helps humans comprehend the decisions of even low-interpretability machine learning models. The methods that we present later can help make sense the effects of features on the final outcome of the model, show the importance of features w.r.t. the model, how the features interact with each other, and give (counter-)examples to give insight into the behavior of the model.
+In a non-mathematical manner, Miller defined interpretability as "the degree to which a human can understand the cause of a decision" @miller2018explanation. In the context of machine learning, Kim et al. defined it as "the degree to which a human can consistently predict the model’s result" @NIPS2016_5680522b. This means that a machine learning model is said to have high interpretability if it is easy for humans to reason and comprehend the model's predictions. There are some machine learning models that come naturally with this ability e.g. linear regression, logistic regression, decision tree, etc. With this report, however, we redirect our focus to the set of methods that helps humans comprehend the decisions of even low-interpretability machine learning models. The methods that we present later can help make sense of the effects of features on the final outcome of the model, show the importance of features with respect to the model, show how the features interact with each other, and give (counter-)examples to give insight into the behavior of the model.
 
 ### Feature Effects
 
@@ -305,7 +306,7 @@ $$
 $$
 e^{orig} = 1 - F_{1}(\vec{y}, \vec{f}(X))
 $$
-Here $1-F_{1}$ is a loss measure based on the $F_{1}$ score. In this paper we compute feature importance on training data, which measures how much a model relies on each feature for making predictions.
+Here $1-F_{1}$ is a loss measure based on the $F_{1}$ score. In this report, we compute feature importance on training data, which measures how much a model relies on each feature for making predictions.
 
 ### Feature Interaction
 
@@ -333,7 +334,14 @@ $$
 
 ### Example-Based Explanations
 
-**Counterfactual Explanations:** A counterfactual explanation of a prediction describes the smallest change to the feature values that changes the prediction to a predefined output.
+**Counterfactual Explanations:** A counterfactual explanation of a prediction describes the smallest change to the feature values that changes the prediction to a predefined output. [@molnar2019] describes four criteria to determine the quality of good counterfactual instances:
+
+1. A counterfactual instance produces the predefined prediction as closely as possible.
+2. A counterfactual should be as similar as possible to the instance regarding feature values.
+3. Multiple diverse counterfactual explanations are often desireable.
+4. A counterfactual instance should have feature values that are likely.
+
+In this report, we use the method by [@Dandl_2020] for generating counterfactual explanations. This method takes into account the aforementioned criteria, the counterfactual generating process. See [@Dandl_2020] for the details of this method.
 
 
 ## Story Time
@@ -575,7 +583,7 @@ best_params <- readRDS("../best_configs.rds")
 5. What can Bob do to improve his credit, i.e. to be considered `good` (according to the model's point of view)? \
 To help Bob, we use the counterfactual explanations to see if there is any combination of changes that can be proposed to mitigate Bob's predicted `credit_risk`. The counterfactuals are presented in Table \ref{tab:counterfactual-diff-results}. In this table, we drop features such as `age` and `foreign_worker` status as it is not realistic to change that. Also, a lot of other features are removed as they are unchanged in the counterfactuals. We also only consider the counterfactuals that have probability greater than 0.5 (which is the threshold for good `credit_risk`). As a result, the features that need to be changed the most to help improve Bob's credit is `duration` and `amount`, where `amount` was changed almost in all of the counterfactuals (97%), followed by `duration` (63%). To be specific, if Bob reduced the credit amount he loans or reduced the credit duration or both, while keeping other elements (other covariates of the model) fixed, the model would predict a better `credit_risk` for him. A detailed look into the effect of these two features on Bob's credit probability are given in Figure \ref{fig:counterfactuals-surface-bob}, which confirms why the changes in these features are recommended by the model.
 
-```{r, eval=FALSE}
+```{r, eval=FALSE, include=FALSE}
 cf <- Counterfactuals$new(
   predictor = model,
   x.interest = bob,
