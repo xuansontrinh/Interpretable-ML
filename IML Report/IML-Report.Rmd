@@ -1,5 +1,5 @@
 ---
-title: "Interpretable Machine Learning Scope Definition Report"
+title: "Interpretable Machine Learning Report"
 author:
   - Xuan-Son Trinh^[Ludwig Maximilian University of Munich, Son.Trinh@campus.lmu.de]
   - Victor Tuekam^[Ludwig Maximilian University of Munich, t.victor@campus.lmu.de]
@@ -21,7 +21,7 @@ knitr::opts_chunk$set(echo = TRUE)
 \newpage
 
 # Dataset
-For the Seminar we use the South German Credit dataset, available in the UCI Machine learning repository @south-german-credit-ds.
+For the Seminar we use the south German credit dataset, available in the UCI Machine learning repository @south-german-credit-ds.
 
 The dataset consists of a 1000 observations together with 21 attributes. The data was collected between 1973 and 1975. The task associated with this data set is the classification of individuals (instances) according to their credit risk ("good", "bad").
 
@@ -81,7 +81,6 @@ _"skilled employee/official"_, _"manager/self-empl./highly qualif. employee"_) |
 
 Table: Dataset
 
-\newpage
 ## Dataset Summary
 ```{r, include=FALSE}
 # Load necessary libraries
@@ -108,7 +107,7 @@ task$col_roles$stratum <- "credit_risk"
 skimr::skim_without_charts(data)
 ```
 
-The data set doesn't have any missing values and requires little preprocessing to fit our model. It can also be pointed out that the data has class-imbalance problem: The number of "good" credited people is more than twice the number of "bad" credited people (700 to 300), as seen in the data set summary above.
+The data set doesn't have any missing values and requires little preprocessing to fit our model. It can also be pointed out that the data has a class-imbalance problem: The number of "good" credited people is more than twice the number of "bad" credited people (700 to 300), as seen in the data set summary above.
 
 \newpage
 
@@ -128,7 +127,7 @@ For preprocessing, we do the following:
 
 - Standardize numerical variables by centering them around their mean and scaling them by their root-mean-square.
 - One-hot encode factor and ordered-factor variables.
-- To account for the class imbalance in the data set, we perform oversampling of the minority class ("bad" class). We set the oversampling ratio at `2.3`.
+- To account for the class imbalance in the data set, we perform oversampling of the minority class ("bad" class). We set the oversampling ratio at `2.3`, as this is approximately the factor by which the minority class varies from the majority class.
 - To make the model aware of the classification cost, we apply thresholding. The `threshold` is the probability value over which a model predicts the positive class, (e.g. predict "good" if the model output is > `0.5`). The `threshold` parameter is tuned together with other model parameters.
 
 We use `mlr3pipelines`^[https://mlr3pipelines.mlr-org.com/] to build a learner that combines both data processing and modeling. Figure \ref{fig:pipeops} shows the pipeline for the radial basis kernel SVM.
@@ -164,7 +163,7 @@ pos <- po("scale") %>>%
 knitr::include_graphics("plots/pipeops.png")
 ```
 
-**Note**: Using `mlr3pipelines` in combination with `iml`^[https://christophm.github.io/iml/] has the advantage that the interpretation is always done with respect to the original features (e.g., before one-hot encoding). This is because pipeline fuses data preprocessing and modeling to a sing unit. This implies that the model itself is a pipeline.
+**Note**: Using `mlr3pipelines` in combination with `iml`^[https://christophm.github.io/iml/] has the advantage that the interpretation is always done with respect to the original features (e.g., before one-hot encoding). This is because the pipeline fuses data preprocessing and modeling to a single unit. This implies that the model itself is a pipeline.
 
 ## Tuning and Benchmarking
 We use nested resampling^[https://mlr3book.mlr-org.com/nested-resampling.html] in order to obtain unbiased performance estimates for the different learners. The parameter tuning is done with the following settings for all models. The tuning code is available in the `source code.R` file in the code repository.
@@ -182,9 +181,9 @@ $$
 \frac{1}{\sum_i \hat w_i}\sum_{i}1(r_i = t_i)\hat w_i
 $$
 where $\hat w_i = \frac{w_i}{\sum_i 1(y_j = y_i)w_i}$ [@mlr3-balanced-accuracy].\
-We use `grid_search` as our hyperparameter tuning algorithm. The number of inner and outer cross-validation folds and terminator evaluations of the nested resampling are set so as to train be able to evaluate the different models in a reasonable amount of time on limited computing resources.
+We use `grid_search` as our hyperparameter tuning algorithm. The number of inner and outer cross-validation folds and terminator evaluations of the nested resampling are set so as to train and be able to evaluate the different models in a reasonable amount of time on limited computing resources.
 
-The code snippet below shows the tuning setup for Xgboost and the radial basis kernel SVM. Please refer to the code in `source code.R` for the other models tuning configuration.
+The code snippet below shows the tuning setup for Xgboost and the radial basis kernel SVM. Please refer to the code in `source code.R` for the other models tuning configurations.
 ```{r, eval=FALSE}
 # xgboost
 xgboost_learner <- po(lrn("classif.xgboost", predict_type="prob"))
@@ -284,18 +283,18 @@ In a non-mathematical manner, Miller defined interpretability as "the degree to 
 
 ### Feature Effects
 
-**Partial Dependence Plot (PDP):** The PDP shows marginal effect one or two features have on the predicted outcome of an ML model. From a PDP, we can observe the relationship between the target (response variable) and a predictor variable, whether it is linear, monotonic or more complex. The PDP is calculated by first defining the value grid for the chosen feature x, then for each grid value v, it replaces the value of feature x in every data point to v and averages the predictions. One strong assumption for using PDP is that the feature of interest is not correlated with other features.\
+**Partial Dependence Plot (PDP):** The PDP shows marginal effects one or two features have on the predicted outcome of an ML model. From a PDP, we can observe the relationship between the target (response variable) and a predictor variable, whether it is linear, monotonic or more complex. The PDP is calculated by first defining the value grid for the chosen feature $x$, then for each grid value $v$, it replaces the value of feature $x$ in every data point to $v$ and averages the predictions. One strong assumption for using PDP is that the feature of interest is not correlated with other features.\
 The partial dependence function for regression is defined and approximated as:
 $$
 \hat f_{\vec{x}_S}(\vec{x}_S) = E_{\vec{x}_C}[\hat f(\vec{x}_S, \vec{x}_C)] = \int \hat f(\vec{x}_S, \vec{x}_C)d\mathbb{P}(\vec{x}_C) \approx \sum_{i = 1}^n \hat f (\vec{x}_S, \vec{x}_C^{(i)})
 $$
-where $\hat f$ is the model, $\vec{x}_S$ are the features to get partial dependence function plotted and $\vec{x}_C$ are the other features, $\vec{x}_C^{(i)}$ are the actual feature values from the dataset, $n$ is the sample size. The approximation for the partial dependence function is calculated using the averages from the training data @molnar2019.\
-_Categorical features handling in PDP_: With a categorical feature x, its categories are considered as separate values and used like the value grid as mentioned earlier. The outcome will be k numbers, one for each of k categories.
+where $\hat f$ is the model, $\vec{x}_S$ are the features for which the partial dependence function should be plotted and $\vec{x}_C$ are the other features, $\vec{x}_C^{(i)}$ are the actual feature values from the dataset, $n$ is the sample size. The approximation for the partial dependence function is calculated using the averages from the training data @molnar2019.\
+_Categorical features handling in PDP_: With a categorical feature $x$, its categories are considered as separate values and used like the value grid as mentioned earlier. The outcome will be $k$ numbers, one for each of $k$ categories.
 
-**Individual Conditional Expectation (ICE) plot:** The plot displays one line per instance that shows how instance's prediction changes when a feature changes. This plot is equivalent to the DPD for individual instances @molnar2019.
+**Individual Conditional Expectation (ICE) plot:** The plot displays one line per instance that shows how instance's prediction changes when a feature changes. This plot is equivalent to the PDP for individual instances @molnar2019.
 
-**Accumulated Local Effects (ALE) Plots:** PDP cannot be trusted when the covariates are strongly correlated. Because of how PDP is calculated, it averages predictions of unlikely instances in the case of strong correlation between features. ALE can counter that effect, in fact, it is a faster and unbiased alternative to PDP. ALE describes how features influence the prediction of an ML model on average. To be specific, with a feature x having (grid) value v, ALE shows how predictions change within a small window (interval) of x around v for the data points in that window @molnar2019.\
-_Categorical features handling in ALE_: to be calculated, ALE needs to know the order of feature values/categories. Therefore, with (unordered) categorical feature, there has to be a way to define that order. A possibility is to order the categories based on their similarity: create a (dis-)similarity matrix between features, apply multidimensional scaling to get one-dimensional distance measure. This is also a thing to keep in mind when interpreting ALE plot of (unordered) categorical feature: it is assumed to have a specific order, and how that order is defined depends on the implementation of algorithms, whether in real life this order makes sense or not.
+**Accumulated Local Effects (ALE) Plots:** PDP cannot be trusted when the covariates are strongly correlated. Because of how PDP is calculated, it averages predictions of unlikely instances in the case of strong correlation between features. ALE can counter that effect, in fact, it is a faster and unbiased alternative to PDP. ALE describes how features influence the prediction of an ML model on average. To be specific, with a feature $x$ having (grid) value $v$, ALE shows how predictions change within a small window (interval) of $x$ around $v$ for the data points in that window @molnar2019.\
+_Categorical features handling in ALE_: To be calculated, ALE needs to know the order of feature values/categories. Therefore, with (unordered) categorical features, there has to be a way to define that order. A possibility is to order the categories based on their similarity: create a (dis-)similarity matrix between features, apply multidimensional scaling to get one-dimensional distance measure. This is also a thing to keep in mind when interpreting ALE plots of (unordered) categorical feature: it is assumed to have a specific order, and how that order is defined depends on the implementation of algorithms, whether in real life this order makes sense or not.
 
 **Shapley Value:** This is a method to estimate feature contributions to a single prediction compared to the average prediction (over all data instances). The shapley value $\phi_{j}$ of a feature $j$ is interpreted as the feature's contribution to the prediction of a particular instance compared to the average prediction for the dataset. See [@molnar2019] for the mathematical details on estimating the shapley value for a feature.
 
@@ -307,17 +306,17 @@ $$
 FI^{j} = \dfrac{e^{perm}}{e^{orig}}
 $$
 $$
-e^{perm} = 1 - F_{1}(\vec{y}, \vec{f}(X^{perm}))
+e^{perm} = 1 - bacc(\vec{y}, \vec{f}(X^{perm}))
 $$
 $$
-e^{orig} = 1 - F_{1}(\vec{y}, \vec{f}(X))
+e^{orig} = 1 - bacc(\vec{y}, \vec{f}(X))
 $$
-Here $1-F_{1}$ is a loss measure based on the $F_{1}$ score. In this report, we compute feature importance on training data, which measures how much a model relies on each feature for making predictions.
+Here $1-bacc$ is a loss measure based on the $bacc$ score. In this report, we compute feature importance on training data, which measures how much a model relies on each feature for making predictions.
 
 ### Feature Interaction
 
-**H-Statistic:** The interaction between two features is defined as the change in the prediction that occurs when varying the features after considering the individual feature effects. I measure of the interaction strength is the H-Statistic. It measures how much of the variation of the prediction depends on the interaction of the features.
-In the absence of any interaction effect between two features. The partial dependence function $PD_{jk}(x_{j}, x_{k})$ between two features can be decompose as shown below:
+**H-Statistic:** The interaction between two features is defined as the change in the prediction that occurs when varying the features after considering the individual feature effects. A measure of the interaction strength is the H-Statistic. It measures how much of the variation of the prediction depends on the interaction of the features.
+In the absence of any interaction effect between two features, the partial dependence function $PD_{jk}(x_{j}, x_{k})$ between two features can be decompose as shown below:
 $$
 PD_{jk}(x_{j}, x_{k}) = PD_{j}(x_{j}) + PD_{k}(x_{k})
 $$
@@ -325,11 +324,11 @@ Equivalently, if a feature does not interact with any other feature. The predict
 $$
 \hat{f}(\vec{x}) = PD_{j}(x_{j}) + PD_{-j}(\vec{x}_{-j})
 $$
-where $PD_{-j}(\textbf{x}_{-j})$ is the partial dependence function that depends on all featuers except the j-th feature.
+where $PD_{-j}(\vec{x}_{-j})$ is the partial dependence function that depends on all features except the j-th feature.
 
 Friedman's H-Statistic can tell us two things:
 
-1. whether and to what extent two features interact with one-another, computed as:
+1. Whether and to what extent two features interact with one-another, computed as:
 $$
 H^{2}_{jk} = \dfrac{ \sum_{i=1}^{n}\biggl[PD_{jk}(x_{j}^{(i)}, x_{k}^{(i)}) - PD_{j}(x_{j}^{(i)}) - PD_{k}(x_{k}^{(i)})\biggr]^{2}}{\sum_{i=1}^{n}PD^{2}_{jk}(x_{j}^{(i)}, x_{k}^{(i)})}
 $$
@@ -347,15 +346,14 @@ $$
 3. Multiple diverse counterfactual explanations are often desireable.
 4. A counterfactual instance should have feature values that are likely.
 
-In this report, we use the method by [@Dandl_2020] for generating counterfactual explanations. This method takes into account the aforementioned criteria, the counterfactual generating process. See [@Dandl_2020] for the details of this method.
+In this report, we use the method by [@Dandl_2020] for generating counterfactual explanations. This method takes into account the aforementioned criteria during the counterfactual generating process. See [@Dandl_2020] for the details of this method.
 
 
-## Story Time
+## Story Time and Analysis
 
-The following story is taking place in 1980, just a few years after the dataset was collected. This is because the dataset is not adjusted for inflation to the present date, and the amounts would be invalid for the recent years. We there also make the further assumption, although very unrealistic but harmless, that the used IML methods were developed and available for application in 1980.
-Bob is a 30 year old, senior data scientist in Munich. He has been married for 5 years with no kids.
+The following story is taking place in 1980, just a few years after the dataset was collected. This is because the dataset is not adjusted for inflation to the present date (and was collected in Deutsche Mark), and the amounts would be invalid for the recent years. We therefore also make the further assumption, although very unrealistic but harmless, that the used IML methods were developed and available for application in 1980.
 
-Bob wanted to loan some money for starting his own company. However, after checking his credit, the bank said no to his request.
+Bob is a 30 year old, senior data scientist in Munich. He has been married for 5 years with no kids. Bob wanted to loan some money for starting his own company. However, after checking his credit, the bank said no to his request.
 In contrast, with his best friend, James, the story is different. James is a doctor, the same age as Bob, and he is single. James wanted a loan to purchase a car and got a green light from the bank.
 
 Although Bob is happy for James, he is very frustrated and curious about why the bank made those decisions, eventhough from the first look, his profile seems very good.  So he decides to investigate the problem to gain some insights. but for that purpose,  he needs a dataset. After a few hours of searching, he found the south German credit data set that was used for predicting credit in the banks. And also, as he does not have the exact algorithm, or any kind of machine learning model that the bank uses, he resorted to his own model choice on the dataset. He selected some of the baseline models and some black box models to benchmark to choose a good one. And his final choice is the support vector machine using radial basis kernel. His model performs really well on test data, which reassures him that it can be used in place of the bank’s model. He also applies the model on his case and his friend’s case. The model predicts a `bad` credit risk for him and `good` credit risk for his friend, this decision is in accordance with the bank’s decision that he loans from. This motivates him to understand the model even more, with the aim of improving his credit.
@@ -439,7 +437,7 @@ model <- Predictor$new(radial_svm_at, data = x, y = german$credit_risk)
 predict(radial_svm_at, bob, predict_type = "response")
 predict(radial_svm_at, james, predict_type = "response")
 ```
-__Note:__ After tuning, the radial SVM has a probability threshold of 0.5 i.e. being greater or equal to 0.5 is considered as having good credit. This threshold needs be taken into account when interpreting the prediction probability from IML methods.
+__Note:__ After tuning, the radial SVM has a probability threshold of 0.5 i.e. being greater or equal to 0.5 is considered as having good credit. This threshold needs to be taken into account when interpreting the prediction probability from IML methods.
 ```{r}
 # Threshold of tuned radial svm.
 radial_svm_at$tuning_result$threshold.thresholds
@@ -450,43 +448,42 @@ To get a general understanding of the model, Bob formulates the following hypoth
 |Hypothesis|IML Method|
 |----------|----------|
 |What are the most important features for the prediction of the `credit_risk`?|Permutation Feature Importance|
-|How strong is the interaction between each feature and all other features in the German Credit Dataset?|H-Statistics|
+|How strong is the interaction between each feature and all other features in the German credit Dataset?|H-Statistics|
 |Is being older better for `credit_risk`?|PDP, ICE, ALE|
 |Is there an interaction between `job` and `credit_history`? People with delayed `credit_history` often have low quality `job`.|H-Statistic|
 |People with high quality `job`s have good `credit_risk`.|ALE|
 |Being a foreign worker does not affect your `credit_risk`. If this feature is important for prediction, this implies discrimination.|ALE|
-|The better the savings, the better your `credit_risk`.|ALE|
+|The better the `savings`, the better your `credit_risk`.|ALE|
 Table: General Hypotheses
 
-To investigate the individual cases of Bob and his friend Bobs asks the following questions, together with the IML methods he thinks can help him answer them.
+To investigate the individual cases of Bob and his friend, Bobs asks the following questions, together with the IML methods he thinks can help him answer them.
 
 |Hypothesis|IML Method|
 |----------|----------|
 |What are the feature contributions to James' `credit_risk` prediction ?|SHAP|
 |What are the feature contributions to Bob's `credit_risk` prediction ?|SHAP|
 |Because Bob is married and James isn't, Bob is interested in whether his marital status has a positive or negative effect on the model's prediction.|SHAP|
-|What can Bob do to improve his credit, i.e. to be considered `good` (according to the model's point of view)?|Counterfactual Explanations|
+|What can Bob do to improve his credit, i.e. to be considered `good` (according to this model's point of view)?|Counterfactual Explanations|
 Table: Specific Hypotheses
 
-We use the package `iml` to investigate our hypotheses.
+We use the package `iml` to investigate our hypotheses. Again, the following interpretations are performed with respect to the original features (before preprocessing by the pipeline).
 
 ### General Hypotheses
 1. What are the most important features for the prediction of the `credit_risk`?\
-The importance of features can be uncovered using Permutation Feature Importance, where the losses are chosen to be `1 - bacc` and `1 - F1`. These losses are chosen as they align with the measures for optimizing and selecting the best model in the benchmark. Through the increase in the prediction error, we can see that the most important feature for predicting `credit_risk` according to the model is `status` of your checking account, which stands out from the rest, and the second most important feature is `duration`. More details can be seen in Figure \ref{fig:feature-importance-fbeta} and Figure \ref{fig:feature-importance-bacc}.
+The importance of features can be uncovered using Permutation Feature Importance, where the losses are chosen to be `1 - bacc` and `1 - F1`. These losses are chosen as they align with the measures for optimizing and selecting the best model in the benchmark. Through the increase in the prediction error, we can see that the most important feature for predicting `credit_risk` according to the model is `status` of your checking account, which stands out from the rest, and the second most important feature is `duration`. More details can be seen in Figure \ref{fig:feature-importance-bacc} and Figure \ref{fig:feature-importance-fbeta}.
 
-```{r out.width='100%', fig.align='center', fig.cap="\\label{fig:feature-importance-fbeta}German Credit Feature Importance with (1 - F1) loss", echo=FALSE}
-knitr::include_graphics("plots/feature_importance_fbeta.png")
-```
-
-```{r out.width='100%', fig.align='center', fig.cap="\\label{fig:feature-importance-bacc}German Credit Feature Importance with (1 - bacc) loss", echo=FALSE}
+```{r out.width='80%', fig.align='center', fig.cap="\\label{fig:feature-importance-bacc}German Credit Feature Importance with (1 - bacc) loss", echo=FALSE}
 knitr::include_graphics("plots/feature_importance_bacc.png")
 ```
 
+```{r out.width='80%', fig.align='center', fig.cap="\\label{fig:feature-importance-fbeta}German Credit Feature Importance with (1 - F1) loss", echo=FALSE}
+knitr::include_graphics("plots/feature_importance_fbeta.png")
+```
 
-2. How strong is the interaction between each feature and all other features in German Credit Dataset?\
+2. How strong is the interaction between each feature and all other features in German credit dataset?\
 To answer the question, we calculate the H-statistic between each feature and all other features. The result is presented in Figure \ref{fig:interaction}. As can be seen, the interactions are very weak. The interactions only explain less than 5% variance in most of the features. The highest interaction strength is with the feature `status` where approximately 17.5% of variance is explained.
 
-```{r out.width='100%', fig.align='center', fig.cap="\\label{fig:interaction}Interaction Strength (H-Statistic) between each feature and all other features", echo=FALSE}
+```{r out.width='80%', fig.align='center', fig.cap="\\label{fig:interaction}Interaction Strength (H-Statistic) between each feature and all other features", echo=FALSE}
 knitr::include_graphics("plots/interaction.jpg")
 ```
 
@@ -505,14 +502,14 @@ knitr::include_graphics("plots/pdp_ice_centered_age.jpg")
 knitr::include_graphics("plots/ale_age.jpg")
 ```
 
-4. Is there an interaction between `job` and `credit_history`? People with delayed `credit_history` often have low quality `job`\
+4. Is there an interaction between `job` and `credit_history`? People with delayed `credit_history` often have low quality `job`.\
 Figure \ref{fig:job-interaction} shows the 2-way interactions between job and the other features. The interaction strength between `job` and `credit_history` is pretty weak. In general all the 2-way interactions between `job` and other features are pretty weak.
 
-```{r job-interaction, out.width='100%', fig.align='center', fig.cap="\\label{job-interaction}2-way interaction strength between `job' and  the other features.", echo=FALSE}
+```{r job-interaction, out.width='80%', fig.align='center', fig.cap="\\label{job-interaction}2-way interaction strength between `job' and  the other features.", echo=FALSE}
 knitr::include_graphics("plots/interaction_job.jpg")
 ```
 
-5. People with high quality `job`s have good `credit_risk`\
+5. People with high quality `job`s have good `credit_risk`.\
 ALE plot continues to be used to answer this question (Figure \ref{fig:ale-job}). Here, the `job`'s categories are ordered based on their similarity to each other, based on the distributions of the other features by `job`'s category. This order makes real-life sense, e.g. high-qualified job is similar to skilled job and dissimilar to unskilled/unemployment job. According to the plot, being unskilled and non-resident or being manager/high qualified employee causes a loss in your credit score while being skilled employees or just being a resident can have a positive effect on your credit score. This raises some questions for us to think about. Why are both unskilled but being resident has good effect on the credit and bad effect otherwise? Is it some kind of discrimination to foreigners? The plot also shows that being a high-qualified employee has the worst effect on the credit, which is an absurd thing. These may be explained due to the fact that the dataset is relatively small so it may possess high variance.
 
 ```{r out.width='100%', fig.align='center', fig.cap="\\label{fig:ale-job}ALE Plot of `job'", echo=FALSE}
@@ -534,11 +531,11 @@ knitr::include_graphics("plots/ale_foreign_worker.jpg")
 ggplot(data = data, mapping = aes(x = foreign_worker, fill = credit_risk)) +
   geom_bar()
 ```
-```{r geom-bar-foreign-worker, out.width='100%', fig.align='center', fig.cap="\\label{geom-bar-foreign-worker}Bar Plot for `foreign-worker' with distribution of `credit-risk' in each level", echo=FALSE}
+```{r geom-bar-foreign-worker, out.width='70%', fig.align='center', fig.cap="\\label{geom-bar-foreign-worker}Bar Plot for `foreign-worker' with distribution of `credit-risk' in each level", echo=FALSE}
 knitr::include_graphics("plots/geom_bar_foreign_worker.jpg")
 ```
 
-7. The better the savings, the better your credit risk\
+7. The better the savings, the better your credit risk.\
 We continue to use ALE plot to answer this question. Looking at the plot in Figure \ref{fig:ale-savings}, it is clear that the more money for savings, the more positive effect it has on your credit risk. And if there is no savings account, the credit can suffer.
 
 ```{r ale-savings, out.width='100%', fig.align='center', fig.cap="\\label{ale-savings}ALE Plot for `savings'", echo=FALSE}
@@ -582,8 +579,13 @@ devtools::load_all("../counterfactuals", export_all = FALSE)
 best_params <- readRDS("../best_configs.rds")
 ```
 
+<<<<<<< HEAD
 5. What can Bob do to improve his credit, i.e. to be considered `good` (according to the model's point of view)? \
 To help Bob, we use the counterfactual explanations to see if there is any combination of changes that can be proposed to mitigate Bob's predicted `credit_risk`. The counterfactuals are presented in Table \ref{tab:counterfactual-diff-results}. In this table, we filter out instances having changing values on features such as `age` and `foreign_worker` status as it is not realistic to change that. Also, a lot of other features are filtered out from the final counterfactuals table as they are unchanged. We also only consider the counterfactuals that have probability greater than 0.5 (which is the threshold for good `credit_risk`). As a result, the features that need to be changed the most to help improve Bob's credit is `duration` and `amount`, where `amount` was changed almost in all of the counterfactuals (97%), followed by `duration` (63%). To be specific, if Bob reduced the credit amount he loans or reduced the credit duration or both, while keeping other elements (other covariates of the model) fixed, the model would predict a better `credit_risk` for him. A detailed look into the effect of these two features on Bob's credit probability are given in Figure \ref{fig:counterfactuals-surface-bob}, which confirms why the changes in these features are recommended by the model.
+=======
+5. What can Bob do to improve his credit, i.e. to be considered `good` (according to this model)? \
+To help Bob, we use the counterfactual explanations to see if there is any combination of changes that can be proposed to mitigate Bob's predicted `credit_risk`. The counterfactuals are presented in Table \ref{tab:counterfactual-diff-results}. In this table, we drop features such as `age` and `foreign_worker` status as it is not realistic to change that. Also, a lot of other features are removed as they are unchanged in the counterfactuals. We also only consider the counterfactuals that have probability greater than 0.5 (which is the threshold for good `credit_risk`). As a result, the features that need to be changed the most to help improve Bob's credit is `duration` and `amount`, where `amount` was changed almost in all of the counterfactuals (97%), followed by `duration` (63%). To be specific, if Bob reduced the credit amount he loans or reduced the credit duration or both, while keeping other elements (other covariates of the model) fixed, the model would predict a better `credit_risk` for him. A detailed look into the effect of these two features on Bob's credit probability are given in Figure \ref{fig:counterfactuals-surface-bob}, which confirms why the changes in these features are recommended by the model.
+>>>>>>> 68b5c93fb396c822c0e8e31291fd53cd7a4be664
 
 ```{r, eval=FALSE, include=FALSE}
 cf <- Counterfactuals$new(
@@ -678,7 +680,7 @@ knitr::include_graphics("plots/counterfactuals_surface_bob.jpg")
 \newpage
 # Conclusion
 In this paper, we have investigated different interpretable machine learning methods, to explain the prediction of a chosen model.
-We used the south german credit dataset collected in the 1970s. The goal of modeling with this dataset is to classify people by their credit risk (good or bad) using 20 features. Our model of choice was a radial basis kernel support vector machine. The motivation for this blackbox model is discussed in Chapter [2](#model-selection). To get some insights into this model's predictions, a short story was created around two characters (Bob, the protagonist and his friend James) and some hypotheses were formulated around this story, which are then investigated using some interpretable machine learning techniques (See Chapter [3](#interpretable-machine-learning-methods-and-hypotheses)). 
+We used the south German credit dataset collected in the 1970s. The goal of modeling with this dataset is to classify people by their credit risk (good or bad) using 20 features. Our model of choice was a radial basis kernel support vector machine. The motivation for this blackbox model is discussed in Chapter [2](#model-selection). To get some insights into this model's predictions, a short story was created around two characters (Bob, the protagonist and his friend James) and some hypotheses were formulated around this story, which are then investigated using some interpretable machine learning techniques (See Chapter [3](#interpretable-machine-learning-methods-and-hypotheses)). 
 
 We observe among others that according to the model trained for the analysis of the different hypotheses, generally the two most important features for predicting credit risk are the checking account `status` and the loan `duration`. Also, it was observed that `age` has a linearly increasing effect on the predicted credit risk, i.e., the higher the age, the better the credit risk. Furthermore, the better a person's `savings`, the better the credit prediction. The general interaction strength between a feature and the other features and pretty weak. The interpretation of the effect of the `job` quality was observed to be counterintuitive, as the high quality managing job, had a negative effect on the model prediction, this might be an issue associated with the small dataset size. Additionally although being a foreign worker is not a very important feature for the model's prediction, we observe that it has a positive effect on the model's prediction. See Section [3.2.1](#general-hypotheses) for a more in-depth analysis of these observations.
 
