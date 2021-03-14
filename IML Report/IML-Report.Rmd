@@ -715,6 +715,6 @@ On a more specific note, we discovered that, what accounted for Bob's `bad` cred
 \newpage
 
 # Source Code
-All of the source code we use for benchmarking and perform interpretation is accessible through this ___[Google Drive link](https://drive.google.com/drive/folders/1Md1GLWYInr4QH7axTwzSn7H0KF-jcUSL?usp=sharing)___.
+All of the source code we use for benchmarking and performing interpretation is accessible through this ___[Google Drive link](https://drive.google.com/drive/folders/1Md1GLWYInr4QH7axTwzSn7H0KF-jcUSL?usp=sharing)___.
 
 # References
