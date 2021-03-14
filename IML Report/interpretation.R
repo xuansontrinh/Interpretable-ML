@@ -1,9 +1,7 @@
 library("mlr3viz")
 library("ggplot2")
 library("mlr3verse")
-library("paradox")
-
-theme_set(theme_bw())
+# library(iml)
 set.seed(20211301)
 
 devtools::load_all("../iml", export_all = FALSE)
@@ -14,16 +12,14 @@ best_params <- readRDS("../best_configs.rds")
 
 
 load("./south-german-credit.Rda")
-data <- lapply(data, function(x) if (is.integer(x)) as.numeric(x) else x)
-data <- lapply(data, function(x) {
-  if (is.ordered(x)) factor(x, ordered = FALSE) else x
-})
+data <- lapply(data, function(x) if(is.integer(x)) as.numeric(x) else x)
+data <- lapply(data, function(x) if(is.ordered(x)) factor(x, ordered = FALSE) else x)
 data <- as.data.frame(data)
 x <- data[which(names(data) != "credit_risk")]
 
 
 # counterfactuals
-bob <- x[1, ]
+bob <- x[1,]
 temp <-
   data.frame(
     "age" = 30,
@@ -47,9 +43,9 @@ temp <-
     "status" = "... >= 200 DM / salary for at least 1 year",
     "telephone" = "yes (under customer name)"
   )
-bob[1, ] <- temp[, colnames(x)]
+bob[1,] = temp[,colnames(x)]
 
-james <- x[1, ]
+james <- x[1,]
 temp <-
   data.frame(
     "age" = 30,
@@ -73,85 +69,87 @@ temp <-
     "status" = "... >= 200 DM / salary for at least 1 year",
     "telephone" = "no"
   )
-james[1, ] <- temp[, colnames(x)]
+james[1,] = temp[,colnames(x)]
 
 task <- TaskClassif$new("german-credit",
-  backend = data, target = "credit_risk", positive = "good"
+                        backend = data, target = "credit_risk", positive = "good"
 )
 
+# TRAINING PART
 
-fencoder <- po("encode",
-  method = "one-hot",
-  affect_columns = selector_type("factor")
-)
-ord_to_num <- po("colapply",
-  applicator = as.numeric,
-  affect_columns = selector_type(c("ordered", "integer"))
-)
+# fencoder <- po("encode",
+#                method = "one-hot",
+#                affect_columns = selector_type("factor")
+# )
+# ord_to_num <- po("colapply",
+#                  applicator = as.numeric,
+#                  affect_columns = selector_type(c("ordered","integer"))
+# )
+# 
+# int_to_num <- po("colapply",
+#                  applicator = as.numeric,
+#                  affect_columns = selector_type("integer")
+# )
+# 
+# # PipeOps
+# po_over <- po("classbalancing",
+#               id = "oversample", adjust = "minor",
+#               reference = "minor", shuffle = FALSE, ratio = 2.3
+# )
+# pos <- po("scale") %>>%
+#   fencoder %>>% ord_to_num %>>% po_over
+# 
+# inner_cv5 <- rsmp("cv", folds = 5L)
+# measure <- msr("classif.bacc")
+# tuner <- tnr("grid_search", resolution = 7L)
+# terminator <- trm("evals", n_evals = 20)
+# 
+# # Radial SVM
+# radial_svm_learner <- lrn("classif.svm",
+#                           type = "C-classification", kernel = "radial", predict_type = "prob"
+# )
+# radial_svm_pipeline <- pos %>>% radial_svm_learner %>>% po("threshold")
+# radial_svm_glearner <- GraphLearner$new(radial_svm_pipeline, id = "radial_svm")
+# radial_svm_search_space <- ParamSet$new(list(
+#   ParamDbl$new("threshold.thresholds", lower = 0, upper = 1),
+#   ParamDbl$new("classif.svm.cost", lower = 0.01, upper = 100),
+#   ParamDbl$new("classif.svm.gamma", lower = 0.0001, upper = 1)
+# ))
+# 
+# radial_svm_at <- AutoTuner$new(
+#   learner = radial_svm_glearner,
+#   resampling = inner_cv5,
+#   terminator = terminator,
+#   search_space = radial_svm_search_space,
+#   tuner = tuner,
+#   measure = measure
+# )
+# 
+# radial_svm_at$predict_type <- "prob"
+# 
+# radial_svm_at$train(task)
+# 
+# radial_svm_at$model
+# 
+# saveRDS(radial_svm_at, file="tuned_radial.rds")
 
-int_to_num <- po("colapply",
-  applicator = as.numeric,
-  affect_columns = selector_type("integer")
-)
 
-# PipeOps
-po_over <- po("classbalancing",
-  id = "oversample", adjust = "minor",
-  reference = "minor", shuffle = FALSE, ratio = 2.3
-)
-pos <- po("scale") %>>%
-  fencoder %>>% ord_to_num %>>% po_over
+radial_svm_at <- readRDS("tuned_radial.rds")
 
-inner_cv5 <- rsmp("cv", folds = 5L)
-measure <- msr("classif.fbeta")
-tuner <- tnr("random_search")
-terminator <- trm("evals", n_evals = 40)
 
-# Radial SVM
-radial_svm_learner <- lrn("classif.svm",
-  type = "C-classification", kernel = "radial", predict_type = "prob"
-)
-radial_svm_pipeline <- pos %>>% radial_svm_learner %>>% po("threshold")
-radial_svm_glearner <- GraphLearner$new(radial_svm_pipeline, id = "radial_svm")
-radial_svm_search_space <- ParamSet$new(list(
-  ParamDbl$new("threshold.thresholds", lower = 0, upper = 1),
-  ParamDbl$new("classif.svm.cost", lower = 0.01, upper = 100),
-  ParamDbl$new("classif.svm.gamma", lower = 0.0001, upper = 1)
-))
-
-radial_svm_at <- AutoTuner$new(
-  learner = radial_svm_glearner,
-  resampling = inner_cv5,
-  terminator = terminator,
-  search_space = radial_svm_search_space,
-  tuner = tuner,
-  measure = measure
-)
-
-radial_svm_at$predict_type <- "prob"
-
-radial_svm_at$train(task)
-
-radial_svm_at$model
-
-saveRDS(radial_svm_at, file = "tuned_radial.rds")
 
 # x$age = as.integer(x$age)
 model <- Predictor$new(radial_svm_at, data = x, y = data$credit_risk)
-saveRDS(model, file = "model.rds")
+saveRDS(model, file="model.rds")
 # effect = FeatureEffects$new(model)
 # plot(effect, features = c("employment_duration"))
 eff <- FeatureEffect$new(model, feature = c("age"))
 eff$plot()
 
-eff <- FeatureEffect$new(model,
-  feature = c("employment_duration"), method = "pdp"
-)
+eff <- FeatureEffect$new(model, feature = c("employment_duration"), method = "pdp")
 eff$plot()
 
-eff <- FeatureEffect$new(model,
-  feature = c("employment_duration"), method = "ice"
-)
+eff <- FeatureEffect$new(model, feature = c("employment_duration"), method = "ice")
 eff$plot()
 
 eff$set.feature("installment_rate")
@@ -159,7 +157,20 @@ eff$plot()
 
 # ggplot(data = data, mapping = aes(x = property, fill = credit_risk)) + geom_bar()
 
-# Feature Importance
+bacc = function(truth, response, sample_weights = NULL) {
+  if (is.null(sample_weights)) {
+    sample_weights = rep(1, length(truth))
+  } else {
+    assert_numeric(sample_weights, lower = 0, any.missing = FALSE)
+  }
+  
+  label_weights = vapply(split(sample_weights, truth), sum, NA_real_)
+  sample_weights = sample_weights / label_weights[truth]
+  sample_weights[is.na(sample_weights)] = 0
+  
+  1 - sum((truth == response) * sample_weights) / sum(sample_weights)
+}
+
 f1 <- function(actual, predicted) {
   tp <- length(actual[actual == "good" & predicted == "good"])
   fp <- length(actual[actual == "bad" & predicted == "good"])
@@ -172,13 +183,16 @@ f1 <- function(actual, predicted) {
     return(1 - (2 * precision * recall / (precision + recall)))
   }
 }
-imp <- FeatureImp$new(model, loss = "ce")
-imp <- FeatureImp$new(model, loss = f1)
-feature_importance_fbeta<- plot(imp) + scale_x_continuous("Feature importance (loss: F1)")
-# ggsave("feature_importance_fbeta.png", feature_importance_fbeta)
+
+# Feature Importance
+imp_fbeta <- FeatureImp$new(model, loss = f1)
+feature_importance_fbeta<- plot(imp_fbeta) + scale_x_continuous("Feature importance (loss: 1 - F1)")
+imp_bacc <- FeatureImp$new(model, loss = bacc)
+feature_importance_bacc<- plot(imp_bacc) + scale_x_continuous("Feature importance (loss: 1 - bacc)")
 
 # H-statistic Interaction
-ia <- Interaction$new(model, feature = "job")
+ia <- Interaction$new(model)
+ia_job <- Interaction$new(model, feature = "job")
 
 model$predict(bob)
 model$predict(james)
@@ -195,11 +209,11 @@ cf <- Counterfactuals$new(
     mosmafs::mosmafsTermGenerations(200)
   ),
   mu = best_params$mu,
-  p.mut = best_params$p.mut,
+  p.mut = best_params$p.mut, 
   p.rec = best_params$p.rec,
   p.mut.gen = best_params$p.mut.gen,
   p.mut.use.orig = best_params$p.mut.use.orig,
-  p.rec.gen = best_params$p.rec.gen,
+  p.rec.gen = best_params$p.rec.gen, 
   initialization = "icecurve",
   p.rec.use.orig = best_params$p.rec.use.orig,
 )
@@ -207,57 +221,42 @@ cf <- Counterfactuals$new(
 # retrieve the counterfactuals of Bob
 cf_diff <- cf$results$counterfactuals.diff
 # filter only the counterfactuals with prediction greater than 0.51
-cf_result_diff <- cf_diff[cf_diff$pred.pred >= 0.51, ]
-cf_result_diff <- cf_result_diff[order(-cf_result_diff$pred.pred), ]
+cf_result_diff <- cf_diff[cf_diff$pred.pred >= 0.51,]
+cf_result_diff <- cf_result_diff[order(-cf_result_diff$pred.pred),]
 # filter features that are not meaningful for the counterfactuals interpretation
-cf_result_diff <- cf_result_diff[cf_result_diff$age == 0, ]
-cf_result_diff <- cf_result_diff[cf_result_diff$foreign_worker == 0, ]
-cf_result_diff <- subset(cf_result_diff,
-  select = -c(
-    dist.target,
-    dist.x.interest,
-    dist.train,
-    pred.NA,
-    credit_history,
-    age,
-    foreign_worker,
-    employment_duration,
-    installment_rate,
-    personal_status_sex,
-    other_debtors,
-    property,
-    other_installment_plans,
-    housing,
-    number_credits,
-    telephone,
-    present_residence,
-    people_liable,
-    nr.changed,
-    status,
-    job
-  )
-)
+cf_result_diff <- cf_result_diff[cf_result_diff$age == 0,]
+cf_result_diff <- cf_result_diff[cf_result_diff$foreign_worker == 0,]
+cf_result_diff <- subset(cf_result_diff, 
+                         select = -c(
+                           dist.target, 
+                           dist.x.interest, 
+                           dist.train, 
+                           pred.NA,
+                           credit_history,
+                           age, 
+                           foreign_worker,
+                           employment_duration,
+                           installment_rate,
+                           personal_status_sex,
+                           other_debtors,
+                           property,
+                           other_installment_plans,
+                           housing,
+                           number_credits,
+                           telephone,
+                           present_residence,
+                           people_liable,
+                           nr.changed,
+                           status
+                         ))
 
-write.table(cf_result_diff,
-  file = "cf_result_diff.csv",
-  sep = "\t", row.names = FALSE
-)
+write.table(cf_result_diff, file = "cf_result_diff.csv",
+            sep = "\t", row.names = F)
 
-a <- cf$plot_parallel(
-  features = c("duration", "amount"),
-  plot.x.interest = FALSE
-)
-a <- a + scale_x_discrete(
-  expand = c(0.1, 0.1),
-  labels = c("duration", "credit amount")
-)
+a <- cf$plot_parallel(features = c("duration", "amount"), plot.x.interest = FALSE)
+a <- a + scale_x_discrete(expand = c(0.1, 0.1), labels = c("duration", "credit amount"))
 a
 b <- cf$plot_surface(features = c("duration", "amount"))
 b
 c <- cf$plot_hv()
 c
-
-cf_result_diff <- read.csv("cf_result_diff.csv",
-                           sep = "\t", header = T,
-                           row.names = NULL
-)
