@@ -714,4 +714,7 @@ We observe among others that according to the model trained for the analysis of 
 On a more specific note, we discovered that, what accounted for Bob's `bad` credit risk prediction were the `amount` he asked, which is fairly large and the credit `duration` of 5 years, compared to James (who has a `good` credit risk prediction) 1 year credit duration. Furthermore, we noticed that being married was not the reason for Bob's `bad` credit risk prediction. To improve Bob's credit risk, we conclude after analysis with counterfactual instances for this particular trained model, that Bob should reduce the credit `amount` and/or the credit `duration` accordingly (Table \ref{tab:counterfactual-diff-results}).
 \newpage
 
+# Source Code
+All of the source code we use for benchmarking and perform interpretation is accessible through this ___[Google Drive link](https://drive.google.com/drive/folders/1Md1GLWYInr4QH7axTwzSn7H0KF-jcUSL?usp=sharing)___.
+
 # References
