@@ -1,6 +1,7 @@
 library("mlr3viz")
 library("ggplot2")
 library("mlr3verse")
+library(paradox)
 set.seed(20211301)
 
 task <- tsk("german_credit")
