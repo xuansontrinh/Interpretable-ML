@@ -10,8 +10,6 @@ library("ggplot2")
 library("mlr3verse")
 set.seed(20211301)
 
-
-
 task <- tsk("german_credit")
 fencoder <- po("encode",
                method = "one-hot",
@@ -35,12 +33,8 @@ pos <- po("scale") %>>%
 
 inner_cv5 <- rsmp("cv", folds = 5L)
 measure <- msr("classif.bacc")
-# measure <- msr("classif.fbeta")
 tuner <- tnr("grid_search", resolution = 7L)
-# tuner <- tnr("random_search")
 terminator <- trm("evals", n_evals = 20)
-
-
 
 log_reg_learner <- lrn("classif.log_reg", predict_type = "prob")
 log_reg_pipeline <- pos %>>% log_reg_learner %>>% po("threshold")
@@ -54,7 +48,6 @@ log_reg_at <- AutoTuner$new(
   terminator = terminator,
   tuner = tuner
 )
-
 
 rpart_learner <- lrn("classif.rpart", predict_type = "prob")
 rpart_pipeline <- pos %>>% rpart_learner %>>% po("threshold")
@@ -221,10 +214,6 @@ radial_svm_at <- AutoTuner$new(
   tuner = tuner,
   measure = measure
 )
-
-
-
-
 
 outer_cv3 <- rsmp("cv", folds = 3L)
 design <- benchmark_grid(
