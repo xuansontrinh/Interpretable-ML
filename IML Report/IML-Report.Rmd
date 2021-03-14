@@ -110,8 +110,10 @@ skimr::skim_without_charts(data)
 
 The data set doesn't have any missing values and requires little preprocessing to fit our model. It can also be pointed out that the data has class-imbalance problem: The number of "good" credited people is more than twice the number of "bad" credited people (700 to 300), as seen in the data set summary above.
 
+\newpage
+
 # Model Selection
-The `mlr3` package and other packages from the `mlr3` ecosystem are used to do the modeling.
+The `mlr3`^[https://mlr3.mlr-org.com/] package and other packages from the `mlr3` ecosystem are used to do the modeling.
 The fitted and tuned models are:
 
 - Logistic Regression
@@ -129,7 +131,7 @@ For preprocessing, we do the following:
 - To account for the class imbalance in the data set, we perform oversampling of the minority class ("bad" class). We set the oversampling ratio at `2.3`.
 - To make the model aware of the classification cost, we apply thresholding. The `threshold` is the probability value over which a model predicts the positive class, (e.g. predict "good" if the model output is > `0.5`). The `threshold` parameter is tuned together with other model parameters.
 
-We use `mlr3pipelines`^[https://mlr3pipelines.mlr-org.com/] to build a learner that combines both data processing and modeling. Figure \ref{fig:pipeops} shows the pipeline for the radial basis kernel svm.
+We use `mlr3pipelines`^[https://mlr3pipelines.mlr-org.com/] to build a learner that combines both data processing and modeling. Figure \ref{fig:pipeops} shows the pipeline for the radial basis kernel SVM.
 
 ```{r, include=FALSE}
 # PipeOps
@@ -170,7 +172,6 @@ We use nested resampling^[https://mlr3book.mlr-org.com/nested-resampling.html] i
 # tuning settings
 measure <- msr("classif.bacc")
 tuner <- tnr("grid_search", resolution = 7L)
-terminator <- trm("evals", n_evals = 20)
 inner_cv5 <- rsmp("cv", folds = 5L)
 outer_cv3 <- rsmp("cv", folds = 3L)
 terminator <- trm("evals", n_evals = 20)
@@ -183,7 +184,7 @@ $$
 where $\hat w_i = \frac{w_i}{\sum_i 1(y_j = y_i)w_i}$ [@mlr3-balanced-accuracy].\
 We use `grid_search` as our hyperparameter tuning algorithm. The number of inner and outer cross-validation folds and terminator evaluations of the nested resampling are set so as to train be able to evaluate the different models in a reasonable amount of time on limited computing resources.
 
-The code snippet below shows the tuning setup for xgboost and the radial basis kernel svm. Please refer to the code in `source code.R` for the other models tuning configuration.
+The code snippet below shows the tuning setup for Xgboost and the radial basis kernel SVM. Please refer to the code in `source code.R` for the other models tuning configuration.
 ```{r, eval=FALSE}
 # xgboost
 xgboost_learner <- po(lrn("classif.xgboost", predict_type="prob"))
@@ -260,14 +261,19 @@ autoplot(bmr, measure = msr("classif.bacc")) +
 autoplot(bmr, measure = msr("classif.fbeta")) +
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
 ```
-```{r evaluation-results-bacc, out.width='60%', fig.align='center', fig.cap="\\label{fig:evalutation-results-bacc}Evaluation using bacc", echo=FALSE}
+```{r evaluation-results-bacc, out.width='70%', fig.align='center', fig.cap="\\label{fig:evalutation-results-bacc}Evaluation using bacc", echo=FALSE}
 knitr::include_graphics("plots/bacc_eval.png")
 ```
-```{r evaluation-results-fbeta, out.width='60%', fig.align='center', fig.cap="\\label{fig:evalutation-results-fbeta}Evaluation using F1", echo=FALSE}
+```{r evaluation-results-fbeta, out.width='70%', fig.align='center', fig.cap="\\label{fig:evalutation-results-fbeta}Evaluation using F1", echo=FALSE}
 knitr::include_graphics("plots/fbeta_eval.png")
 ```
 
 As can be seen in Figure \ref{fig:evaluation-results-bacc} and Figure \ref{fig:evaluation-results-fbeta}, the tuned SVM using radial basis kernel consistently achieves top performance in both the nested cross validation plots using `F1` score and `bacc` score and therefore is used for subsequent interpretations. We also observe that the performance of decision tree and random forest does not change much, when categorical variables are not one-hot encoded (See box plots in Figure \ref{fig:evaluation-results-bacc} and Figure \ref{fig:evaluation-results-fbeta} labeled `fct_`).
+
+Finally, we train the chosen SVM model on the whole dataset and proceed to analyzing it using IML methods.
+```{r, eval=FALSE}
+radial_svm_at$train(task)
+```
 
 \newpage
 # Interpretable Machine Learning Methods and Hypotheses
@@ -346,8 +352,9 @@ In this report, we use the method by [@Dandl_2020] for generating counterfactual
 
 ## Story Time
 
-The following story is taking place in 1980, just a few years after the dataset was collected.
+The following story is taking place in 1980, just a few years after the dataset was collected. This is because the dataset is not adjusted for inflation to the present date, and the amounts would be invalid for the recent years. We there also make the further assumption, although very unrealistic but harmless, that the used IML methods were developed and available for application in 1980.
 Bob is a 30 year old, senior data scientist in Munich. He has been married for 5 years with no kids.
+
 Bob wanted to loan some money for starting his own company. However, after checking his credit, the bank said no to his request.
 In contrast, with his best friend, James, the story is different. James is a doctor, the same age as Bob, and he is single. James wanted a loan to purchase a car and got a green light from the bank.
 
@@ -449,8 +456,7 @@ To get a general understanding of the model, Bob formulates the following hypoth
 |People with high quality `job`s have good `credit_risk`.|ALE|
 |Being a foreign worker does not affect your `credit_risk`. If this feature is important for prediction, this implies discrimination.|ALE|
 |The better the savings, the better your `credit_risk`.|ALE|
-<!-- |The higher the `installment_rate` the better the `credit_risk`|Partial Dependence Plot, SHAP Dependence Plot & SHAP Summary Plots| -->
-<!-- |Does owning a house (`housing`) mean good `credit_risk`|Partial Dependence Plot, SHAP Dependence Plot & SHAP Summary Plot| -->
+Table: General Hypotheses
 
 To investigate the individual cases of Bob and his friend Bobs asks the following questions, together with the IML methods he thinks can help him answer them.
 
@@ -460,6 +466,7 @@ To investigate the individual cases of Bob and his friend Bobs asks the followin
 |What are the feature contributions to Bob's `credit_risk` prediction ?|SHAP|
 |Because Bob is married and James isn't, Bob is interested in whether his marital status has a positive or negative effect on the model's prediction.|SHAP|
 |What can Bob do to improve his credit, i.e. to be considered `good` (according to the model's point of view)?|Counterfactual Explanations|
+Table: Specific Hypotheses
 
 We use the package `iml` to investigate our hypotheses.
 
@@ -467,11 +474,11 @@ We use the package `iml` to investigate our hypotheses.
 1. What are the most important features for the prediction of the `credit_risk`?\
 The importance of features can be uncovered using Permutation Feature Importance, where the losses are chosen to be `1 - bacc` and `1 - F1`. These losses are chosen as they align with the measures for optimizing and selecting the best model in the benchmark. Through the increase in the prediction error, we can see that the most important feature for predicting `credit_risk` according to the model is `status` of your checking account, which stands out from the rest, and the second most important feature is `duration`. More details can be seen in Figure \ref{fig:feature-importance-fbeta} and Figure \ref{fig:feature-importance-bacc}.
 
-```{r out.width='70%', fig.align='center', fig.cap="\\label{fig:feature-importance-fbeta}German Credit Feature Importance with (1 - F1) loss", echo=FALSE}
+```{r out.width='100%', fig.align='center', fig.cap="\\label{fig:feature-importance-fbeta}German Credit Feature Importance with (1 - F1) loss", echo=FALSE}
 knitr::include_graphics("plots/feature_importance_fbeta.png")
 ```
 
-```{r out.width='70%', fig.align='center', fig.cap="\\label{fig:feature-importance-bacc}German Credit Feature Importance with (1 - bacc) loss", echo=FALSE}
+```{r out.width='100%', fig.align='center', fig.cap="\\label{fig:feature-importance-bacc}German Credit Feature Importance with (1 - bacc) loss", echo=FALSE}
 knitr::include_graphics("plots/feature_importance_bacc.png")
 ```
 
@@ -479,36 +486,36 @@ knitr::include_graphics("plots/feature_importance_bacc.png")
 2. How strong is the interaction between each feature and all other features in German Credit Dataset?\
 To answer the question, we calculate the H-statistic between each feature and all other features. The result is presented in Figure \ref{fig:interaction}. As can be seen, the interactions are very weak. The interactions only explain less than 5% variance in most of the features. The highest interaction strength is with the feature `status` where approximately 17.5% of variance is explained.
 
-```{r out.width='70%', fig.align='center', fig.cap="\\label{fig:interaction}Interaction Strength (H-Statistic) between each feature and all other features", echo=FALSE}
+```{r out.width='100%', fig.align='center', fig.cap="\\label{fig:interaction}Interaction Strength (H-Statistic) between each feature and all other features", echo=FALSE}
 knitr::include_graphics("plots/interaction.jpg")
 ```
 
 3. Is being older better for `credit_risk`?\
 To answer this question, we use the PDP + ICE (centered + uncentered) and ALE plot (Figures \ref{fig:pdp-ice-age}, \ref{fig:pdp-ice-center-age}, \ref{fig:ale-age}). From the three plots, it can be seen that there is a consistent linear relation between the predicted probability and `age`: The higher the age, the better the `good` credit probability. With the ALE plot, we can also observe more clearly the effect of the individual feature `age` on the average prediction: age before 35 has negative effect on the credit score.
 
-```{r pdp-ice-age, out.width='70%', fig.align='center', fig.cap="\\label{pdp-ice-age}Uncentered PDP + ICE Plot of `age'", echo=FALSE}
+```{r pdp-ice-age, out.width='100%', fig.align='center', fig.cap="\\label{pdp-ice-age}Uncentered PDP + ICE Plot of `age'", echo=FALSE}
 knitr::include_graphics("plots/pdp_ice_age.jpg")
 ```
 
-```{r pdp-ice-center-age, out.width='70%', fig.align='center', fig.cap="\\label{pdp-ice-center-age}Centered PDP + ICE Plot of `age'", echo=FALSE}
+```{r pdp-ice-center-age, out.width='100%', fig.align='center', fig.cap="\\label{pdp-ice-center-age}Centered PDP + ICE Plot of `age'", echo=FALSE}
 knitr::include_graphics("plots/pdp_ice_centered_age.jpg")
 ```
 
-```{r ale-age, out.width='70%', fig.align='center', fig.cap="\\label{ale-age}ALE Plot of `age'", echo=FALSE}
+```{r ale-age, out.width='100%', fig.align='center', fig.cap="\\label{ale-age}ALE Plot of `age'", echo=FALSE}
 knitr::include_graphics("plots/ale_age.jpg")
 ```
 
 4. Is there an interaction between `job` and `credit_history`? People with delayed `credit_history` often have low quality `job`\
 Figure \ref{fig:job-interaction} shows the 2-way interactions between job and the other features. The interaction strength between `job` and `credit_history` is pretty weak. In general all the 2-way interactions between `job` and other features are pretty weak.
 
-```{r job-interaction, out.width='70%', fig.align='center', fig.cap="\\label{job-interaction}2-way interaction strength between `job' and  the other features.", echo=FALSE}
+```{r job-interaction, out.width='100%', fig.align='center', fig.cap="\\label{job-interaction}2-way interaction strength between `job' and  the other features.", echo=FALSE}
 knitr::include_graphics("plots/interaction_job.jpg")
 ```
 
 5. People with high quality `job`s have good `credit_risk`\
 ALE plot continues to be used to answer this question (Figure \ref{fig:ale-job}). Here, the `job`'s categories are ordered based on their similarity to each other, based on the distributions of the other features by `job`'s category. This order makes real-life sense, e.g. high-qualified job is similar to skilled job and dissimilar to unskilled/unemployment job. According to the plot, being unskilled and non-resident or being manager/high qualified employee causes a loss in your credit score while being skilled employees or just being a resident can have a positive effect on your credit score. This raises some questions for us to think about. Why are both unskilled but being resident has good effect on the credit and bad effect otherwise? Is it some kind of discrimination to foreigners? The plot also shows that being a high-qualified employee has the worst effect on the credit, which is an absurd thing. These may be explained due to the fact that the dataset is relatively small so it may possess high variance.
 
-```{r out.width='80%', fig.align='center', fig.cap="\\label{fig:ale-job}ALE Plot of `job'", echo=FALSE}
+```{r out.width='100%', fig.align='center', fig.cap="\\label{fig:ale-job}ALE Plot of `job'", echo=FALSE}
 knitr::include_graphics("plots/ale_job.jpg")
 ```
 
@@ -519,7 +526,7 @@ As can be seen from Figure \ref{fig:feature-importance-bacc} and Figure \ref{fig
 summary(data$foreign_worker)
 ```
 
-```{r ale-foreign-worker, out.width='70%', fig.align='center', fig.cap="\\label{ale-foreign-worker}ALE Plot for `foreign-worker'", echo=FALSE}
+```{r ale-foreign-worker, out.width='100%', fig.align='center', fig.cap="\\label{ale-foreign-worker}ALE Plot for `foreign-worker'", echo=FALSE}
 knitr::include_graphics("plots/ale_foreign_worker.jpg")
 ```
 
@@ -527,22 +534,17 @@ knitr::include_graphics("plots/ale_foreign_worker.jpg")
 ggplot(data = data, mapping = aes(x = foreign_worker, fill = credit_risk)) +
   geom_bar()
 ```
-```{r geom-bar-foreign-worker, out.width='70%', fig.align='center', fig.cap="\\label{geom-bar-foreign-worker}Bar Plot for `foreign-worker' with distribution of `credit-risk' in each level", echo=FALSE}
+```{r geom-bar-foreign-worker, out.width='100%', fig.align='center', fig.cap="\\label{geom-bar-foreign-worker}Bar Plot for `foreign-worker' with distribution of `credit-risk' in each level", echo=FALSE}
 knitr::include_graphics("plots/geom_bar_foreign_worker.jpg")
 ```
 
 7. The better the savings, the better your credit risk\
 We continue to use ALE plot to answer this question. Looking at the plot in Figure \ref{fig:ale-savings}, it is clear that the more money for savings, the more positive effect it has on your credit risk. And if there is no savings account, the credit can suffer.
 
-```{r ale-savings, out.width='80%', fig.align='center', fig.cap="\\label{ale-savings}ALE Plot for `savings'", echo=FALSE}
+```{r ale-savings, out.width='100%', fig.align='center', fig.cap="\\label{ale-savings}ALE Plot for `savings'", echo=FALSE}
 knitr::include_graphics("plots/ale_savings.jpg")
 ```
 
-<!-- 10. The higher the `installment_rate` the better the `credit_risk`\ -->
-<!-- NaN -->
-
-<!-- 11. Does owning a house (`housing`) mean good `credit_risk`\ -->
-<!-- NaN -->
 
 ### Bob and James-specific Hypotheses
 
@@ -553,7 +555,7 @@ Figure \ref{fig:shapley-james} shows that the most influential features affectin
 ```{r, eval=FALSE}
 shapley <- Shapley$new(model, x.interest = james)
 ```
-```{r shapley-james, out.width='80%', fig.align='center', fig.cap="\\label{shapley-james}Shapley contributions to James's predictions", echo=FALSE}
+```{r shapley-james, out.width='100%', fig.align='center', fig.cap="\\label{shapley-james}Shapley contributions to James's predictions", echo=FALSE}
 knitr::include_graphics("plots/shapley_james.jpg")
 ```
 2. What are the feature contributions to Bob’
@@ -566,7 +568,7 @@ shapley <- Shapley$new(model, x.interest = bob)
 ```{r}
 max(data$amount)
 ```
-```{r shapley-bob, out.width='80%', fig.align='center', fig.cap="\\label{shapley-bob}Shapley contributions to Bob's predictions", echo=FALSE}
+```{r shapley-bob, out.width='100%', fig.align='center', fig.cap="\\label{shapley-bob}Shapley contributions to Bob's predictions", echo=FALSE}
 knitr::include_graphics("plots/shapley_bob.jpg")
 ```
 
@@ -676,10 +678,11 @@ knitr::include_graphics("plots/counterfactuals_surface_bob.jpg")
 \newpage
 # Conclusion
 In this paper, we have investigated different interpretable machine learning methods, to explain the prediction of a chosen model.
-We used the south german credit dataset collected in the 1970s. The goal of modeling with this dataset is to classify people by their credit risk (good or bad) using 20 features. Our model of choice was a radial basis kernel support vector machine. The motivation for this blackbox model is discussed in Chapter [2](#model-selection). To get some insights into this model's predictions, a short story was created around two characters (Bob, the protagonist and his friend James) and some hypotheses were formulated around this story, which are then investigating using some interpretable machine learning techniques (See Chapter [3](#interpretable-machine-learning-methods-and-hypotheses)). 
+We used the south german credit dataset collected in the 1970s. The goal of modeling with this dataset is to classify people by their credit risk (good or bad) using 20 features. Our model of choice was a radial basis kernel support vector machine. The motivation for this blackbox model is discussed in Chapter [2](#model-selection). To get some insights into this model's predictions, a short story was created around two characters (Bob, the protagonist and his friend James) and some hypotheses were formulated around this story, which are then investigated using some interpretable machine learning techniques (See Chapter [3](#interpretable-machine-learning-methods-and-hypotheses)). 
 
-We observe among others that according to the model trained for the analysis of the different hypotheses, generally the two most important features for predicting credit risk are the checking account `status` and the loan `duration`. Also it was observed that `age` has a linearly increasing effect on the predicted credit risk, i.e., the higher the age, the better the credit risk. Also the better a person's saving, the better the credit prediction. The general interaction strength between a feature and the other features and pretty weak. The interpretation of the effect of the `job` quality was observed to be counterintuitive, as the high quality managing job, had a negative effect on the model prediction, this might be an issue associated with the small dataset size. Additionally although being a foreign worker is not a very important feature for the model's prediction, we observe that it has a positive effect on the model's prediction. See Section [3.2.1](#general-hypotheses) for a more in-depth analysis of these observations.
+We observe among others that according to the model trained for the analysis of the different hypotheses, generally the two most important features for predicting credit risk are the checking account `status` and the loan `duration`. Also, it was observed that `age` has a linearly increasing effect on the predicted credit risk, i.e., the higher the age, the better the credit risk. Furthermore, the better a person's `savings`, the better the credit prediction. The general interaction strength between a feature and the other features and pretty weak. The interpretation of the effect of the `job` quality was observed to be counterintuitive, as the high quality managing job, had a negative effect on the model prediction, this might be an issue associated with the small dataset size. Additionally although being a foreign worker is not a very important feature for the model's prediction, we observe that it has a positive effect on the model's prediction. See Section [3.2.1](#general-hypotheses) for a more in-depth analysis of these observations.
 
-On a more specific note, we discovered that, what accounted for Bob's `bad` credit risk prediction were the `amount` he asked, which is fairly large and the credit `duration` of 5 years, compared to James (who has a `good` credit risk prediction) 1 year credit duration. Furthermore, we noticed that being married was not the reason for Bob's `bad` credit risk prediction. To improve Bob's credit risk, we conclude after analysis with counterfactual instances, that Bob should reduce the credit `amount` and/or the credit `duration` accordingly.
+On a more specific note, we discovered that, what accounted for Bob's `bad` credit risk prediction were the `amount` he asked, which is fairly large and the credit `duration` of 5 years, compared to James (who has a `good` credit risk prediction) 1 year credit duration. Furthermore, we noticed that being married was not the reason for Bob's `bad` credit risk prediction. To improve Bob's credit risk, we conclude after analysis with counterfactual instances for this particular trained model, that Bob should reduce the credit `amount` and/or the credit `duration` accordingly (Table \ref{tab:counterfactual-diff-results}).
 \newpage
+
 # References
