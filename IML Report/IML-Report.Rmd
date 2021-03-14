@@ -1,5 +1,5 @@
 ---
-title: "Interpretable Machine Learning Scope Definition Report"
+title: "Interpretable Machine Learning Report"
 author:
   - Xuan-Son Trinh^[Ludwig Maximilian University of Munich, Son.Trinh@campus.lmu.de]
   - Victor Tuekam^[Ludwig Maximilian University of Munich, t.victor@campus.lmu.de]
@@ -81,7 +81,6 @@ _"skilled employee/official"_, _"manager/self-empl./highly qualif. employee"_) |
 
 Table: Dataset
 
-\newpage
 ## Dataset Summary
 ```{r, include=FALSE}
 # Load necessary libraries
@@ -350,7 +349,7 @@ $$
 In this report, we use the method by [@Dandl_2020] for generating counterfactual explanations. This method takes into account the aforementioned criteria, the counterfactual generating process. See [@Dandl_2020] for the details of this method.
 
 
-## Story Time
+## Story Time and Analysis
 
 The following story is taking place in 1980, just a few years after the dataset was collected. This is because the dataset is not adjusted for inflation to the present date, and the amounts would be invalid for the recent years. We there also make the further assumption, although very unrealistic but harmless, that the used IML methods were developed and available for application in 1980.
 Bob is a 30 year old, senior data scientist in Munich. He has been married for 5 years with no kids.
