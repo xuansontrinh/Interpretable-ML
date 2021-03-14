@@ -167,18 +167,20 @@ knitr::include_graphics("plots/pipeops.png")
 We use nested resampling^[https://mlr3book.mlr-org.com/nested-resampling.html] in order to obtain unbiased performance estimates for the different learners. The parameter tuning is done with the following settings for all models. The tuning code is available in the `source code.R` file in the code repository.
 ```{r}
 # tuning settings
-measure <- msr("classif.fbeta")
-tuner <- tnr("random_search")
+measure <- msr("classif.bacc")
+tuner <- tnr("grid_search", resolution = 7L)
+terminator <- trm("evals", n_evals = 20)
 inner_cv5 <- rsmp("cv", folds = 5L)
 outer_cv3 <- rsmp("cv", folds = 3L)
-terminator <- trm("evals", n_evals = 40)
+terminator <- trm("evals", n_evals = 20)
 ```
-As can be seen in the code snippet above, we use the `F1 score` (`beta = 1`) as our tuning performance measure.
-The `F1 score` is a classification measure defined as the harmonic mean of the classification precision and recall. This makes the `F1` measure particularly suitable for class imbalance problems.
+As can be seen in the code snippet above, we use the `classif.bacc`, or the _balanced accuracy_ as our tuning performance measure.
+The balanced accuracy is used in binary and multi-class classification problems to deal with imbalanced datasets. It is defined as the average of recall obtained on each class @balanced-accuracy.
 $$
-F_{1} = 2 \cdot \dfrac{precision \cdot recall}{precision + recall}
+\frac{1}{\sum_i \hat w_i}\sum_{i}1(r_i = t_i)\hat w_i
 $$
-We use `random_search` as it was demonstrated to be more efficient for hyperparameter optimization that `grid_search` by [@Bergstra2012]. The number of inner and outer crossvalidation folds and terminator evaluations of the nested resampling are set so as to train be able to evaluate the different models in a reasonable amount of time on limited computing resources.
+where $\hat w_i = \frac{w_i}{\sum_i 1(y_j = y_i)w_i}$ @mlr3-balanced-accuracy.\
+We use `grid_search` as our hyperparameter tuning algorithm. The number of inner and outer cross-validation folds and terminator evaluations of the nested resampling are set so as to train be able to evaluate the different models in a reasonable amount of time on limited computing resources.
 
 The code snippet below shows the tuning setup for xgboost and the radial basis kernel svm. Please refer to the code in `source code.R` for the other models tuning configuration.
 ```{r, eval=FALSE}
@@ -252,14 +254,19 @@ design <- benchmark_grid(
 ## Result
 
 ```{r, eval=FALSE}
+autoplot(bmr, measure = msr("classif.bacc")) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
 autoplot(bmr, measure = msr("classif.fbeta")) +
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
 ```
-```{r evaluation-results, out.width='60%', fig.align='center', fig.cap="\\label{fig:evalutation-results}Evaluation", echo=FALSE}
+```{r evaluation-results-bacc, out.width='60%', fig.align='center', fig.cap="\\label{fig:evalutation-results-bacc}Evaluation using bacc", echo=FALSE}
+knitr::include_graphics("plots/bacc_eval.png")
+```
+```{r evaluation-results-fbeta, out.width='60%', fig.align='center', fig.cap="\\label{fig:evalutation-results-fbeta}Evaluation using F1", echo=FALSE}
 knitr::include_graphics("plots/fbeta_eval.png")
 ```
 
-As can be seen in Figure \ref{fig:evaluation-results}, the tuned SVM using radial basis kernel has the best performance (highest F1 score) and therefore is used for subsequent interpretations. We also observe that the performance of decision tree and random forest does not change much, when categorical variables are not one-hot encoded (See box plots in Figure \ref{fig:evaluation-results} labeled `fct_`).
+As can be seen in Figure \ref{fig:evaluation-results-bacc} and Figure \ref{fig:evaluation-results-fbeta}, the tuned SVM using radial basis kernel consistently achieves top performance in both the nested cross validation plots using `F1` score and `bacc` score and therefore is used for subsequent interpretations. We also observe that the performance of decision tree and random forest does not change much, when categorical variables are not one-hot encoded (See box plots in Figure \ref{fig:evaluation-results-bacc} and Figure \ref{fig:evaluation-results-fbeta} labeled `fct_`).
 
 \newpage
 # Interpretable Machine Learning Methods and Hypotheses
