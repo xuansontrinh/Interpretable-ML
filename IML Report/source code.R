@@ -1,10 +1,3 @@
-# install.packages("mlr3verse")
-# install.packages("e1071")
-# install.packages("xgboost")
-# install.packages("ranger")
-# install.packages("tidyverse")
-# install.packages("praznik")
-
 library("mlr3viz")
 library("ggplot2")
 library("mlr3verse")
